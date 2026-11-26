@@ -12,12 +12,16 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Use runner Android SDK
+        run: |
+          test -n "$ANDROID_HOME"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
@@ -29,7 +33,7 @@ jobs:
           "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify out/Cyclone-Open-alpha1-debug.apk
           cd out
           sha256sum Cyclone-Open-alpha1-debug.apk > SHA256SUMS
-          printf '%s\n' "$GITHUB_SHA" > SOURCE_SHA
+          git -C .. rev-parse HEAD > SOURCE_SHA
       - uses: actions/upload-artifact@v4
         with:
           name: cyclone-open-debug
