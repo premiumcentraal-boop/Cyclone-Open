@@ -1,0 +1,48 @@
+name: Android foundation
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Use runner Android SDK
+        run: |
+          test -n "$ANDROID_HOME"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+      - name: Verify APK and record provenance
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/debug/app-debug.apk out/Cyclone-Open-alpha1-debug.apk
+          "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify out/Cyclone-Open-alpha1-debug.apk
+          cd out
+          sha256sum Cyclone-Open-alpha1-debug.apk > SHA256SUMS
+          git -C .. rev-parse HEAD > SOURCE_SHA
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cyclone-open-debug
+          path: out/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-reports
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-debug.*

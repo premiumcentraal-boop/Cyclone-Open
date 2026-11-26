@@ -1,0 +1,8 @@
+<resources>
+    <style name="OpenTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowBackground">#10151B</item>
+        <item name="android:colorAccent">#A8E5D2</item>
+    </style>
+</resources>
