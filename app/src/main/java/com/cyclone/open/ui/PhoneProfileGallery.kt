@@ -77,7 +77,8 @@ internal fun PhoneProfileCard(
     busy: Boolean,
     onSelect: () -> Unit,
     onRename: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    referenceLabel: String? = null
 ) {
     val runtimeDetail = UnavailableRuntime(phone.runtime).status().detail
     GlassPanel(selected = selected) {
@@ -103,6 +104,7 @@ internal fun PhoneProfileCard(
             }
         }
         val location = if (phone.runtime == RuntimeKind.LOCAL_VM) "Local VM" else "Remote VM"
+        referenceLabel?.let { Text(it, color = OpenGlass.Muted) }
         Text("Android $androidVersion · ${phone.memoryMiB} MiB · $location", color = OpenGlass.Muted)
         Text(runtimeDetail, color = OpenGlass.Muted)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

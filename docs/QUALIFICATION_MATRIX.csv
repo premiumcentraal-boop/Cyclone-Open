@@ -21,6 +21,12 @@ AP14,APK,M00/M01,Signing continuity,Owner-approved update key and migration evid
 AP15,APK,M01,Registry disk full,Failed write preserves data with actionable error,CI_VERIFIED,Build #8 injected ENOSPC and EDQUOT after a partial write and verified unchanged bytes and a successful retry.
 AP16,APK,M01,Transactional profile volumes,Prepared volume precedes publication and startup recovers pending work,CI_VERIFIED,Build #9 verified legacy provisioning and kept committed data across a force-stop while removing an empty orphan.
 AP17,APK,M01,Image access recovery,Revoked access restored only for the original unchanged source,CI_VERIFIED,Build #12 verified the restoration rules using Android instrumentation and a permission and content fixture.
+CAT01,reference catalog,M15,Strict bundled catalog,Reject corrupt or unknown fields and retain sourced display facts,NOT_RUN,Android instrumentation added.
+CAT02,reference catalog,M02/M15,Reference versus runtime,Compact review distinguishes display targets from runtime availability,NOT_RUN,Android instrumentation added.
+AP18,APK,M02/M03,Stale draft approval,Revalidate latest catalog and image before any volume side effect,NOT_RUN,Unit and Android transaction tests added.
+RD01,readiness,M05/M14,Scope and freshness,Expired or mismatched evidence cannot qualify a backend,NOT_RUN,Fixture tests added. Actual guest evidence remains open.
+RD02,readiness,M05/M14,Independent ecosystem gates,Host information and store function do not establish licensing or certification,NOT_RUN,Unit and Android UI tests added.
+LAB01,Cuttlefish,M06,Read-only reference host preflight,Report actual ABI and KVM access with explicit package pins,BLOCKED,Workspace probe returned x86_64 and missing KVM. No pinned AOSP artifact pair was available.
 LC01,lifecycle,M03/M04,Duplicate request,One resource per idempotency key,NOT_RUN,
 LC02,lifecycle,M03/M04,Stale generation,Rejected,CI_VERIFIED,Build #10 tested rejected stale fixture confirmations and lease invalidation after successful confirmation.
 LC03,lifecycle,M03/M04,Wrong device,No input or data routed,CI_VERIFIED,Build #10 rejected wrong-target fixture confirmations before lease publication. Guest input transport remains unverified.
