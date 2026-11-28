@@ -11,10 +11,14 @@ import com.cyclone.open.core.DraftReview
 import com.cyclone.open.core.DraftReviewException
 import com.cyclone.open.core.ImageReferenceException
 import com.cyclone.open.core.ImageReferences
+import com.cyclone.open.core.JsonDirectory
 import com.cyclone.open.core.InsufficientProfileStorageException
 import com.cyclone.open.core.PhoneVolumeRepository
+import com.cyclone.open.core.ProfileBackup
+import com.cyclone.open.core.ProfileBackups
 import com.cyclone.open.core.ReferenceCatalog
 import com.cyclone.open.core.ReferenceCatalogReader
+import com.cyclone.open.core.ReferenceKey
 import com.cyclone.open.core.RegistryReadException
 import com.cyclone.open.core.RegistryStore
 import com.cyclone.open.core.RegistryWriteException
@@ -26,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 internal data class RegistryOperationState(
     val busy: Boolean = false,
@@ -44,6 +49,8 @@ internal class OpenRegistryViewModel(application: Application) : AndroidViewMode
     private val store = RegistryStore.get(application)
     private val volumes = PhoneVolumeRepository(application, store)
     private val images = ImageReferences(store, application.contentResolver)
+    private val savedBackups = ProfileBackups(JsonDirectory(File(application.noBackupFilesDir, "draft-backups-v1")))
+    private val backupState = MutableStateFlow<List<Pair<String, ProfileBackup>>>(emptyList())
     private val operationState = MutableStateFlow(RegistryOperationState())
     private val catalogState = MutableStateFlow<CatalogState>(CatalogState.Loading)
     private val draftReview = MutableStateFlow<DraftReview?>(null)
@@ -53,6 +60,7 @@ internal class OpenRegistryViewModel(application: Application) : AndroidViewMode
     val catalog = catalogState.asStateFlow()
     val review = draftReview.asStateFlow()
     val hostObservation = controllerObservation.asStateFlow()
+    val backups = backupState.asStateFlow()
 
     init { refresh() }
 
@@ -65,6 +73,7 @@ internal class OpenRegistryViewModel(application: Application) : AndroidViewMode
         }
         volumes.open()
         images.reconcile()
+        backupState.value = savedBackups.list()
     }
 
     fun refreshHealth() = submit(closeDialog = false) {
@@ -75,6 +84,24 @@ internal class OpenRegistryViewModel(application: Application) : AndroidViewMode
         val loaded = catalogState.value as? CatalogState.Loaded
             ?: throw DraftReviewException("The reference catalog is unavailable. Reload it before creating a draft.")
         draftReview.value = volumes.reviewDraft(loaded.catalog, request)
+    }
+
+    fun saveBackup(phoneId: String) = submit(closeDialog = false, notice = "Draft settings backed up on this device.") {
+        savedBackups.save(ProfileBackup.capture(store.read(), phoneId))
+        backupState.value = savedBackups.list()
+    }
+
+    fun deleteBackup(id: String) = submit {
+        savedBackups.delete(id)
+        backupState.value = savedBackups.list()
+    }
+
+    fun reviewRestore(id: String, reference: ReferenceKey) = submit(closeDialog = false) {
+        val loaded = catalogState.value as? CatalogState.Loaded
+            ?: throw DraftReviewException("The reference catalog is unavailable.")
+        val backup = savedBackups.list().singleOrNull { it.first == id }?.second
+            ?: throw DraftReviewException("This backup is unavailable.")
+        draftReview.value = volumes.reviewDraft(loaded.catalog, backup.request(store.read(), reference))
     }
 
     fun clearDraftReview() {

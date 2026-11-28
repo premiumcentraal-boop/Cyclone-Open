@@ -12,7 +12,6 @@ import android.util.JsonToken
 import java.io.IOException
 import java.io.InputStream
 import java.net.URI
-import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.time.LocalDate
 
@@ -84,9 +83,9 @@ internal object ReferenceCatalogReader {
     }
 
     fun read(input: InputStream): ReferenceCatalog = try {
-        val bytes = input.readNBytes(MAX_BYTES + 1)
-        require(bytes.size <= MAX_BYTES)
-        val text = Charsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString()
+        val bytes = StrictJson.readBytes(input, MAX_BYTES)
+        val text = StrictJson.text(bytes)
+        StrictJson.check(text)
         val root = JsonReader(text.reader()).use { reader ->
             reader.isLenient = false
             val value = reader.value(0)

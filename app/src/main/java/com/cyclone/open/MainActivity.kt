@@ -42,7 +42,7 @@ private val bg = OpenGlass.Background
 private val panel = OpenGlass.Panel
 private val muted = OpenGlass.Muted
 private enum class Page { PHONES, IMAGES, HEALTH }
-private enum class DialogKind { CREATE, RENAME, REMOVE_PHONE, REMOVE_IMAGE, IMPORT }
+private enum class DialogKind { CREATE, RESTORE, REMOVE_BACKUP, RENAME, REMOVE_PHONE, REMOVE_IMAGE, IMPORT }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +62,7 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
     val catalog = (catalogState as? CatalogState.Loaded)?.catalog
     val draftReview by controller.review.collectAsState()
     val hostObservation by controller.hostObservation.collectAsState()
+    val backups by controller.backups.collectAsState()
     val busy = operation.busy
     var page by rememberSaveable { mutableStateOf(Page.PHONES) }
     var switchError by remember { mutableStateOf<String?>(null) }
@@ -83,7 +84,7 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
     val reference = catalog?.references?.firstOrNull { it.key.id == referenceId }
     val scope=rememberCoroutineScope()
     fun closeDialog() {
-        if (dialog == DialogKind.CREATE) controller.clearDraftReview()
+        if (dialog == DialogKind.CREATE || dialog == DialogKind.RESTORE) controller.clearDraftReview()
         dialog = null
     }
     LaunchedEffect(operation.completedChanges) {
@@ -193,8 +194,30 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
                             referenceLabel = p.reference?.let { key ->
                                 catalog?.resolve(key)?.let { "${it.label} · Virtual reference" }
                                     ?: "Saved virtual reference unavailable"
-                            }
+                            },
+                            onBackup = { controller.saveBackup(p.id) }
                         )
+                    }
+                    if (backups.isNotEmpty()) {
+                        item { Text("Draft settings backups", style = MaterialTheme.typography.titleLarge) }
+                        items(backups, key = { "backup-${it.first}" }) { (id, backup) ->
+                            GlassPanel {
+                                Text(backup.name, style = MaterialTheme.typography.titleMedium)
+                                Text("Android ${backup.androidVersion} · ${backup.memoryMiB} MiB target", color = muted)
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    TextButton(enabled = !busy && catalog != null, onClick = {
+                                        controller.clearDraftReview()
+                                        target = id
+                                        referenceId = backup.reference?.takeIf { catalog?.resolve(it) != null }?.id.orEmpty()
+                                        dialog = DialogKind.RESTORE
+                                    }) { Text("Restore settings") }
+                                    TextButton(enabled = !busy, onClick = {
+                                        target = id
+                                        dialog = DialogKind.REMOVE_BACKUP
+                                    }) { Text("Remove backup") }
+                                }
+                            }
+                        }
                     }
                 }
                 Page.IMAGES -> {
@@ -229,7 +252,7 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
     val r=registry
     if(d!=null&&r!=null) AlertDialog(
         onDismissRequest={if(!busy)closeDialog()},
-        title={Text(when(d){DialogKind.CREATE->if (draftReview == null) "Create phone draft" else "Review phone draft";DialogKind.RENAME->"Rename phone";DialogKind.REMOVE_PHONE->"Remove phone draft?";DialogKind.REMOVE_IMAGE->"Remove image reference?";DialogKind.IMPORT->"Verify image"})},
+        title={Text(when(d){DialogKind.CREATE->if (draftReview == null) "Create phone draft" else "Review phone draft";DialogKind.RESTORE->"Restore draft settings";DialogKind.REMOVE_BACKUP->"Remove backup?";DialogKind.RENAME->"Rename phone";DialogKind.REMOVE_PHONE->"Remove phone draft?";DialogKind.REMOVE_IMAGE->"Remove image reference?";DialogKind.IMPORT->"Verify image"})},
         text={Column(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.fillMaxWidth().verticalScroll(rememberScrollState())){
             if (d == DialogKind.RENAME || d == DialogKind.IMPORT || (d == DialogKind.CREATE && draftReview == null)) {
                 OutlinedTextField(value=name,onValueChange={name=it},label={Text("Name")},singleLine=true,enabled=!busy)
@@ -249,6 +272,14 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(RuntimeKind.LOCAL_VM,RuntimeKind.REMOTE_VM).forEach{k->FilterChip(selected=runtime==k,onClick={runtime=k},label={Text(if(k==RuntimeKind.LOCAL_VM)"Local VM" else "Remote VM")},enabled=!busy)} }
                     }
                 }
+                DialogKind.RESTORE -> {
+                    Text("Restoring creates a new draft with empty profile storage.", color = muted)
+                    val approved = draftReview
+                    if (approved != null) DraftReviewPanel(approved) else {
+                        ReferenceChoices(catalog?.references.orEmpty(), reference?.key, !busy) { referenceId = it.key.id }
+                    }
+                }
+                DialogKind.REMOVE_BACKUP -> Text("Remove this saved settings copy? Your phone drafts remain available.")
                 DialogKind.IMPORT -> {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { (13..16).forEach{v->FilterChip(selected=version==v,onClick={version=v},label={Text(v.toString())},enabled=!busy)} }
                     OutlinedTextField(value=digest,onValueChange={digest=it},label={Text("Expected SHA-256")},enabled=!busy)
@@ -263,13 +294,21 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
             }
         }},
         dismissButton={TextButton(enabled=!busy,onClick={
-            if (d == DialogKind.CREATE && draftReview != null) controller.clearDraftReview() else closeDialog()
-        }){Text(if (d == DialogKind.CREATE && draftReview != null) "Edit" else "Cancel")}},
-        confirmButton={Button(enabled=!busy && (d != DialogKind.CREATE || draftReview != null || (reference != null && r.images.any { it.id == imageId })),onClick={
+            if ((d == DialogKind.CREATE || d == DialogKind.RESTORE) && draftReview != null) controller.clearDraftReview() else closeDialog()
+        }){Text(if ((d == DialogKind.CREATE || d == DialogKind.RESTORE) && draftReview != null) "Edit" else "Cancel")}},
+        confirmButton={Button(enabled=!busy && when (d) {
+            DialogKind.CREATE -> draftReview != null || (reference != null && r.images.any { it.id == imageId })
+            DialogKind.RESTORE -> draftReview != null || reference != null
+            else -> true
+        },onClick={
             when(d){
                 DialogKind.CREATE -> if (draftReview != null) controller.publishDraft() else reference?.let {
                     controller.reviewDraft(DraftRequest(name, it.key, imageId, runtime, memory))
                 }
+                DialogKind.RESTORE -> if (draftReview != null) controller.publishDraft() else reference?.let {
+                    controller.reviewRestore(target, it.key)
+                }
+                DialogKind.REMOVE_BACKUP -> controller.deleteBackup(target)
                 DialogKind.RENAME -> controller.rename(target, name)
                 DialogKind.REMOVE_PHONE -> controller.removePhone(target)
                 DialogKind.REMOVE_IMAGE -> controller.removeImage(target)
@@ -277,8 +316,9 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
             }
         }){Text(when (d) {
             DialogKind.CREATE -> if (draftReview == null) "Review draft" else "Save draft"
+            DialogKind.RESTORE -> if (draftReview == null) "Review restore" else "Restore as new draft"
             DialogKind.IMPORT -> "Verify & add"
-            DialogKind.REMOVE_IMAGE, DialogKind.REMOVE_PHONE -> "Remove"
+            DialogKind.REMOVE_IMAGE, DialogKind.REMOVE_PHONE, DialogKind.REMOVE_BACKUP -> "Remove"
             DialogKind.RENAME -> "Save"
         })}}
     )
