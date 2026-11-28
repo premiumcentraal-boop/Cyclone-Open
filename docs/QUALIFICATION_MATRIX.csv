@@ -17,7 +17,7 @@ AP10,APK,M00/M01,Image grant release,Unused permission released after safe remov
 AP11,APK,M00/M01,Provider changed,Changed bytes not bootable,NOT_RUN,
 AP12,APK,M00/M01,Accessibility,Large font and screen reader controls usable,NOT_RUN,
 AP13,APK,M00/M01,Picker pagination,All authorized image choices reachable,NOT_RUN,
-AP14,APK,M00/M01,Signing continuity,Owner-approved update key and migration evidence,NOT_RUN,
+AP14,APK,M00/M01,Signing continuity,Owner-approved update key and migration evidence,BLOCKED,Verified build #3 and #4 APKs use different debug signing certificates. No owner-approved update key or migration evidence. See EVIDENCE.md.
 LC01,lifecycle,M03/M04,Duplicate request,One resource per idempotency key,NOT_RUN,
 LC02,lifecycle,M03/M04,Stale generation,Rejected,NOT_RUN,
 LC03,lifecycle,M03/M04,Wrong device,No input or data routed,NOT_RUN,

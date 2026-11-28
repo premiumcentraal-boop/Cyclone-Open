@@ -12,6 +12,8 @@ Updated 28 November 2026.
 
 The app manages the current host, draft configurations, and imported image references. Both guest runtimes report unavailable. Physical verification, security review, app compatibility, and Google Play licensing each have their own release gates.
 
+Builds #3 and #4 have different debug signers. Update-compatible signing remains a release gate for installations with existing data.
+
 The next M01 step after B004 is to move registry observation and mutations into lifecycle-safe state (B003). Owner-authorized Pixel installation and both tile paths remain tracked separately from Android emulator tests.
 
 [Milestone tracker](TASK_BACKLOG.json) · [Qualification matrix](QUALIFICATION_MATRIX.csv) · [Engineering evidence](EVIDENCE.md)
