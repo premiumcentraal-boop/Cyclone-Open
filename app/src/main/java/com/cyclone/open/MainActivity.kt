@@ -22,6 +22,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider
 import com.cyclone.open.core.*
 import com.cyclone.open.ui.AuroraSheet
 import com.cyclone.open.ui.DraftImagePicker
@@ -32,7 +33,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.UUID
 
 private val mint = OpenGlass.Mint
 private val bg = OpenGlass.Background
@@ -44,20 +44,21 @@ private enum class DialogKind { CREATE, RENAME, REMOVE_PHONE, REMOVE_IMAGE, IMPO
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { OpenGlass.Theme { OpenScreen(this) } }
+        val controller = ViewModelProvider(this)[OpenRegistryViewModel::class.java]
+        setContent { OpenGlass.Theme { OpenScreen(this, controller) } }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun OpenScreen(activity: ComponentActivity) {
-    val store=remember { RegistryStore.get(activity) }
-    val volumes = remember(store) { PhoneVolumeRepository(activity, store) }
+private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryViewModel) {
     val switcher = remember { AtomicSwitchJournal.coordinator(activity) }
-    var registry by remember { mutableStateOf<Registry?>(null) }
+    val registry by controller.registry.collectAsState()
+    val operation by controller.operation.collectAsState()
+    val busy = operation.busy
     var page by rememberSaveable { mutableStateOf(Page.PHONES) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var busy by remember { mutableStateOf(false) }
+    var switchError by remember { mutableStateOf<String?>(null) }
+    val error = operation.error ?: switchError
     var dialog by rememberSaveable { mutableStateOf<DialogKind?>(null) }
     var target by rememberSaveable { mutableStateOf("") }
     var name by rememberSaveable { mutableStateOf("") }
@@ -69,40 +70,31 @@ private fun OpenScreen(activity: ComponentActivity) {
     var imageQuery by rememberSaveable { mutableStateOf("") }
     var uri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var auroraOpen by rememberSaveable { mutableStateOf(false) }
+    var restoreTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var acknowledgedChange by rememberSaveable { mutableLongStateOf(operation.completedChanges) }
     val scope=rememberCoroutineScope()
-    fun showError(e: Exception) {
-        error = when (e) {
-            is InsufficientProfileStorageException -> e.message
-            is RegistryReadException -> "Saved records could not be read. Reload the registry to retry."
-            is RegistryWriteException -> "The change could not be confirmed. Reload the registry before retrying."
-            is IllegalArgumentException -> "Invalid configuration or checksum. Check the fields and try again."
-            else -> "Operation failed. Existing records were not intentionally changed."
+    LaunchedEffect(operation.completedChanges) {
+        if (operation.completedChanges != acknowledgedChange) {
+            if (operation.completedChanges > acknowledgedChange) dialog = null
+            acknowledgedChange = operation.completedChanges
         }
     }
-    fun refresh() { scope.launch { try { registry=withContext(Dispatchers.IO){volumes.open()}; error=null } catch(e: CancellationException){throw e} catch(e:Exception){showError(e)} } }
-    LaunchedEffect(Unit) { refresh() }
     LaunchedEffect(switcher) {
         try {
             withContext(Dispatchers.IO) { switcher.recover() }
         } catch (e: CancellationException) {
             throw e
         } catch (_: java.io.IOException) {
-            error = "Saved switch state could not be recovered. Android Home is available."
+            switchError = "Saved switch state could not be recovered. Android Home is available."
         }
     }
-    fun commit(operation: () -> Registry) {
-        if(busy) return
-        busy=true;error=null
-        scope.launch {
-            try { registry=withContext(Dispatchers.IO) { operation() };dialog=null }
-            catch(e:CancellationException){throw e}
-            catch(e:Exception){showError(e)}
-            finally{busy=false}
-        }
-    }
-    fun mutate(block: (Registry)->Registry) = commit { store.change(block) }
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { chosen ->
         if(chosen!=null){uri=chosen;name="Android image";digest="";version=15;dialog=DialogKind.IMPORT}
+    }
+    val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { chosen ->
+        val id = restoreTarget
+        restoreTarget = null
+        if (chosen != null && id != null) controller.restoreImageAccess(id, chosen)
     }
     fun nativeSettings() {
         try { activity.startActivity(Intent("android.settings.USER_SETTINGS")) }
@@ -137,7 +129,8 @@ private fun OpenScreen(activity: ComponentActivity) {
                 Text(when(page){Page.PHONES->"Your phones";Page.IMAGES->"Image library";Page.HEALTH->"Node health"},fontSize=32.sp,fontWeight=FontWeight.Bold)
                 Text("Android-first · Alpha 1",color=muted)
             }
-            if(error!=null)item{GlassPanel { Text(error!!,color=MaterialTheme.colorScheme.error); TextButton(onClick={error=null;refresh()}){Text("Reload registry")} }}
+            if(error!=null)item{GlassPanel { Text(error,color=MaterialTheme.colorScheme.error); TextButton(enabled = !busy, onClick={switchError=null;controller.refresh()}){Text("Reload registry")} }}
+            operation.notice?.let { notice -> item { Text(notice, color = mint) } }
             if(r==null){item{Text("Registry unavailable or loading.",color=muted)}}
             else when(page) {
                 Page.PHONES -> {
@@ -145,7 +138,7 @@ private fun OpenScreen(activity: ComponentActivity) {
                         Text("PHYSICAL HOST",color=mint,fontSize=11.sp,fontWeight=FontWeight.Bold)
                         Text(Build.MODEL,fontSize=24.sp,fontWeight=FontWeight.SemiBold)
                         Text("Android "+Build.VERSION.RELEASE+" · "+HostRuntime.status().detail,color=muted)
-                        if(r.selected!=HOST_ID) OutlinedButton(enabled=!busy,onClick={mutate{Rules.select(it,HOST_ID)}}){Text("Select host")}
+                        if(r.selected!=HOST_ID) OutlinedButton(enabled=!busy,onClick={controller.select(HOST_ID)}){Text("Select host")}
                         FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                             Button(onClick={returnHome()}){Text("Return home")}
                             OutlinedButton(onClick={nativeSettings()}){Text("Users")}
@@ -156,7 +149,7 @@ private fun OpenScreen(activity: ComponentActivity) {
                     items(r.phones,key={it.id}){ p ->
                         PhoneProfileCard(
                             p, r.images.first { it.id == p.imageId }.androidVersion, r.selected == p.id, busy,
-                            onSelect = { mutate { Rules.select(it, p.id) } },
+                            onSelect = { controller.select(p.id) },
                             onRename = { target = p.id; name = p.name; dialog = DialogKind.RENAME },
                             onRemove = { target = p.id; dialog = DialogKind.REMOVE_PHONE }
                         )
@@ -170,7 +163,11 @@ private fun OpenScreen(activity: ComponentActivity) {
                         Text("Android "+im.androidVersion+" · "+im.bytes+" bytes",color=muted)
                         Text("SHA-256 matched on import · boot unverified",color=mint,fontSize=12.sp)
                         Text(im.sha256,fontSize=11.sp,color=muted)
-                        TextButton(enabled=!busy,onClick={target=im.id;dialog=DialogKind.REMOVE_IMAGE}){Text("Remove reference")}
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            TextButton(enabled = !busy, onClick = { controller.recheckImage(im.id) }) { Text("Verify again") }
+                            TextButton(enabled = !busy, onClick = { restoreTarget = im.id; restorePicker.launch(arrayOf("*/*")) }) { Text("Restore access") }
+                            TextButton(enabled=!busy,onClick={target=im.id;dialog=DialogKind.REMOVE_IMAGE}){Text("Remove reference")}
+                        }
                     }}
                 }
                 Page.HEALTH -> {
@@ -192,7 +189,7 @@ private fun OpenScreen(activity: ComponentActivity) {
             registry, busy,
             dismiss = { auroraOpen = false },
             openAndroidHome = { auroraOpen = false; returnHome() },
-            selectDraft = { id -> auroraOpen = false; mutate { Rules.select(it, id) } }
+            selectDraft = { id -> auroraOpen = false; controller.select(id) }
         )
     }
     val d=dialog
@@ -218,51 +215,18 @@ private fun OpenScreen(activity: ComponentActivity) {
                 DialogKind.REMOVE_IMAGE -> Text("Remove the reference, not the source document. Referenced images cannot be removed.")
                 DialogKind.RENAME -> Unit
             }
-            if (d != DialogKind.IMPORT && error != null) {
-                Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
+            if (error != null) {
+                Text(error, color = MaterialTheme.colorScheme.error)
             }
         }},
         dismissButton={TextButton(enabled=!busy,onClick={dialog=null}){Text("Cancel")}},
         confirmButton={Button(enabled=!busy,onClick={
             when(d){
-                DialogKind.CREATE-> { val n=name;val i=imageId;val k=runtime;val m=memory;commit{volumes.create(n,i,k,m)} }
-                DialogKind.RENAME-> {val id=target;val n=name;mutate{Rules.rename(it,id,n)}}
-                DialogKind.REMOVE_PHONE->{val id=target;mutate{Rules.remove(it,id)}}
-                DialogKind.REMOVE_IMAGE->{
-                    val id=target;mutate{Rules.removeImage(it,id)}
-                }
-                DialogKind.IMPORT->{
-                    val u=uri;val n=name;val v=version;val hash=digest
-                    if(u!=null){
-                        busy=true;error=null
-                        scope.launch{
-                            try{
-                                registry=withContext(Dispatchers.IO){
-                                    val label=Rules.label(n)
-                                    val uriText = u.toString()
-                                    require(store.read().images.none { it.uri == uriText })
-                                    val check=ImageInspector.inspect(activity.contentResolver,u,hash)
-                                    val image = ImageRecord(UUID.randomUUID().toString(), label, v, uriText, check.hash, check.bytes)
-                                    val resolver = activity.contentResolver
-                                    val grant = Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                    synchronized(store) {
-                                        require(store.read().images.none { it.uri == uriText })
-                                        resolver.takePersistableUriPermission(u, grant)
-                                        try {
-                                            store.change { Rules.addImage(it, image) }
-                                        } catch (e: Exception) {
-                                            // A write can be unconfirmed. Keep access if any saved reference may still need it.
-                                            val unused = runCatching { store.read().images.none { it.uri == uriText } }.getOrDefault(false)
-                                            if (unused) runCatching { resolver.releasePersistableUriPermission(u, grant) }
-                                            throw e
-                                        }
-                                    }
-                                }
-                                dialog=null
-                            }catch(e:CancellationException){throw e}catch(e:Exception){showError(e);dialog=null}finally{busy=false}
-                        }
-                    }
-                }
+                DialogKind.CREATE -> controller.create(name, imageId, runtime, memory)
+                DialogKind.RENAME -> controller.rename(target, name)
+                DialogKind.REMOVE_PHONE -> controller.removePhone(target)
+                DialogKind.REMOVE_IMAGE -> controller.removeImage(target)
+                DialogKind.IMPORT -> uri?.let { controller.importImage(it, name, version, digest) }
             }
         }){Text(if(d==DialogKind.IMPORT)"Verify & add" else if(d in listOf(DialogKind.REMOVE_IMAGE,DialogKind.REMOVE_PHONE))"Remove" else "Save")}}
     )

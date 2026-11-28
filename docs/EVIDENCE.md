@@ -57,3 +57,9 @@ Build #10 passed on `c090890fe496d536686b47f511dbb10169be248b`. The downloaded A
 ## 28 November 2026 — profile gallery and Aurora
 
 The app uses the adapted glass theme and labelled profile cards. Glass selection motion snaps when Android disables animations. Aurora is an in-app sheet with access to Android Home and the saved draft list. The image chooser searches every imported reference, including results beyond the first eight. Compose tests cover semantic selection and action labels, the Home action in Aurora, and selecting a search result. Manual TalkBack, font-scale and device checks remain separate. [Source provenance](UPSTREAM.md)
+
+Build #11 passed on `ceafbe68199893433593ca5f46f979dd8b3fdd00`. The verified test archive contains 17 successful Android 15 instrumentation cases and both restart phases. [Build #11](https://github.com/premiumcentraal-boop/Cyclone-Open/actions/runs/46159591823) · [Instrumentation reports](https://github.com/premiumcentraal-boop/Cyclone-Open/actions/runs/46159591823/artifacts/15269158163)
+
+## 28 November 2026 — M01 registry and document grants
+
+An Android ViewModel owns in-flight registry operations across activity recreation. UI instances observe committed records from the same store. Image references release access only when no saved reference needs it. Startup reconciles interrupted-import grants, and a failed import retains its grant if the saved state is uncertain. Recheck verifies the current bytes, and Restore access verifies the original document and digest before renewing a revoked grant. Instrumentation covers duplicate references, failed publication, revoked access, changed input and activity recreation.

@@ -15,8 +15,8 @@ AP08,APK,M00/M01,Interrupted write,Old or new complete record; no partial state,
 AP09,APK,M00/M01,Concurrent updates,No lost committed record,CI_VERIFIED,Android 15 emulator build #5 verified 20 concurrent mutations through one app store and reopened all records.
 AP10,APK,M00/M01,Image grant release,Unused permission released after safe removal,NOT_RUN,
 AP11,APK,M00/M01,Provider changed,Changed bytes not bootable,NOT_RUN,
-AP12,APK,M00/M01,Accessibility,Large font and screen reader controls usable,NOT_RUN,
-AP13,APK,M00/M01,Picker pagination,All authorized image choices reachable,NOT_RUN,
+AP12,APK,M00/M01,Accessibility,Large font and screen reader controls usable,NOT_RUN,Build #11 verified selection and action semantics with reduced motion. Manual TalkBack and large font tests remain open.
+AP13,APK,M00/M01,Picker pagination,All authorized image choices reachable,CI_VERIFIED,Build #11 searched 16 image references and selected item 16 through the picker.
 AP14,APK,M00/M01,Signing continuity,Owner-approved update key and migration evidence,BLOCKED,Local disposable-key signing verified. Build #7 had no repository signing secret and published no APK. Installed update data persistence remains untested.
 AP15,APK,M01,Registry disk full,Failed write preserves data with actionable error,CI_VERIFIED,Build #8 injected ENOSPC and EDQUOT after a partial write and verified unchanged bytes and a successful retry.
 AP16,APK,M01,Transactional profile volumes,Prepared volume precedes publication and startup recovers pending work,CI_VERIFIED,Build #9 verified legacy provisioning and kept committed data across a force-stop while removing an empty orphan.

@@ -39,6 +39,14 @@ class OpenProfileUiTest {
     }
 
     @Test
+    fun navigationSelectionSurvivesActivityRecreation() {
+        compose.onNodeWithText("Health", ignoreCase = false).performClick()
+        compose.onNodeWithText("Node health").assertIsDisplayed()
+        compose.activityRule.scenario.recreate()
+        compose.onNodeWithText("Node health").assertIsDisplayed()
+    }
+
+    @Test
     fun selectedDraftAndActionsHaveAccessibilitySemanticsWithReducedMotion() {
         val renamed = AtomicBoolean()
         val phone = PhoneRecord(UUID.randomUUID().toString(), "Harbor", RuntimeKind.LOCAL_VM, "image", 3072)

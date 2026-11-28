@@ -2,6 +2,8 @@ package com.cyclone.open.core
 
 import android.content.Context
 import android.util.AtomicFile
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -25,6 +27,8 @@ class RegistryStore internal constructor(
     }
     private val file = AtomicFile(baseFile)
     private val legacyBackup = File(baseFile.path + ".bak")
+    private val snapshots = MutableStateFlow<Registry?>(null)
+    internal val committed = snapshots.asStateFlow()
 
     @Synchronized
     fun read(): Registry {
@@ -33,10 +37,11 @@ class RegistryStore internal constructor(
                 file.readFully()
             } catch (e: FileNotFoundException) {
                 if (file.baseFile.exists() || legacyBackup.exists()) throw e
-                return Registry()
+                return Registry().also { snapshots.value = it }
             }
-            return decode(bytes.toString(Charsets.UTF_8))
+            return decode(bytes.toString(Charsets.UTF_8)).also { snapshots.value = it }
         } catch (e: Exception) {
+            snapshots.value = null
             throw RegistryReadException(e)
         }
     }
@@ -93,6 +98,6 @@ class RegistryStore internal constructor(
             if (storageFull(e)) throw InsufficientProfileStorageException(e)
             throw RegistryWriteException(e)
         }
-        return next
+        return next.also { snapshots.value = it }
     }
 }
