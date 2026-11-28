@@ -33,3 +33,7 @@ Pixel install, coexistence, Quick Settings, process death, and signing continuit
 ## 28 November 2026 — CI debug signing
 
 Local Gradle verification passed `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest` with a disposable JKS injected through the workflow restore script. Both APKs and an app rebuild matched that certificate. The restore script rejected missing and malformed inputs and removed the temporary file after invalid input. The test keystore was disposed of. Owner secret provisioning, stable CI artifact comparison, and installed update data persistence are pending. [Signing setup](DEBUG_SIGNING.md)
+
+## 28 November 2026 — M01 storage and recovery port
+
+The Forge storage adapter adds private files, preferences, and cache areas and maps `ENOSPC` and `EDQUOT` to an actionable error. Android tests inject those errno values after a partial registry write. They compare the committed bytes and retry through the existing `RegistryStore`. A separate CI sequence force-stops the application between two instrumentation invocations and asserts a different process ID before checking state. These faults model a disk-full write. Whole-filesystem exhaustion and sudden power loss are separate cases. [Source provenance](UPSTREAM.md)

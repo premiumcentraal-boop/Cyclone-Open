@@ -76,6 +76,7 @@ private fun OpenScreen(activity: ComponentActivity) {
     val scope=rememberCoroutineScope()
     fun showError(e: Exception) {
         error = when (e) {
+            is InsufficientProfileStorageException -> e.message
             is RegistryReadException -> "Saved records could not be read. Reload the registry to retry."
             is RegistryWriteException -> "The change could not be confirmed. Reload the registry before retrying."
             is IllegalArgumentException -> "Invalid configuration or checksum. Check the fields and try again."
@@ -194,6 +195,9 @@ private fun OpenScreen(activity: ComponentActivity) {
                 DialogKind.REMOVE_PHONE -> Text("Only this configuration is removed; no guest disk exists.")
                 DialogKind.REMOVE_IMAGE -> Text("Remove the reference, not the source document. Referenced images cannot be removed.")
                 DialogKind.RENAME -> Unit
+            }
+            if (d != DialogKind.IMPORT && error != null) {
+                Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
             }
         }},
         dismissButton={TextButton(enabled=!busy,onClick={dialog=null}){Text("Cancel")}},

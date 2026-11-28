@@ -6,13 +6,17 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.FileOutputStream
 import java.io.IOException
 
 class RegistryReadException(cause: Exception) : IOException("Cannot read the saved registry.", cause)
 class RegistryWriteException(cause: IOException) : IOException("Cannot save the registry.", cause)
 
 /** One process-wide store. Android users keep separate private state. */
-class RegistryStore internal constructor(baseFile: File) {
+class RegistryStore internal constructor(
+    baseFile: File,
+    private val writeBytes: (FileOutputStream, ByteArray) -> Unit = FileOutputStream::write
+) {
     companion object {
         @Volatile private var instance: RegistryStore? = null
         fun get(context: Context): RegistryStore = instance ?: synchronized(this) {
@@ -69,7 +73,7 @@ class RegistryStore internal constructor(baseFile: File) {
         try {
             val out = file.startWrite()
             try {
-                out.write(data)
+                writeBytes(out, data)
                 // AtomicFile logs sync and rename failures without returning them to callers.
                 out.fd.sync()
             } catch (e: IOException) {
@@ -81,6 +85,7 @@ class RegistryStore internal constructor(baseFile: File) {
                 throw IOException("Registry commit could not be verified.")
             }
         } catch (e: IOException) {
+            if (storageFull(e)) throw InsufficientProfileStorageException(e)
             throw RegistryWriteException(e)
         }
         return next

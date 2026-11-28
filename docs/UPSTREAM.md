@@ -7,3 +7,13 @@
 - Alpha154 published tag exists; alpha155 source candidate verified via release/version.toml, no alpha155–157 published tag found in queried refs. Not a guarantee no inaccessible newer branch exists.
 - No Cloak identity hooks, integrity changes, privileged helper, model keys, signing secrets or original Cyclone package/authorities included.
 - Cyclone upstream describes its license as proprietary. Owner authorized reuse; do not assume public source equals open-source license. Keep provenance and review before redistribution.
+
+## Ported files
+
+The owner authorized reuse from `premiumcentraal-boop/cyclone-cloak-forge` at `5113af4a84a6607b067b08566431c304c74f1776`. This revision contains no `LICENSE` file. The port retains source attribution and does not assign an open-source license to Forge or proprietary Cyclone code.
+
+| Cyclone Open file | Source at the pinned revision | License | Changes | Tests |
+| --- | --- | --- | --- | --- |
+| `core/ProfileStorage.kt` | Forge `app/src/main/java/com/cyclonecloak/app/data/ProfileStorage.kt` | Owner-authorized reuse | Uses private durable and cache roots, canonical UUIDs, no symlink traversal, atomic file publication, and typed disk-full errors. | `ProfileStorageRecoveryTest`, `ProfileRestartTest` |
+| `core/ProfileStorageRecoveryTest.kt` | Forge `app/src/androidTest/java/com/cyclonecloak/app/StartupRecoveryTest.kt` and `ProfileStorageTest.kt` in that directory | Owner-authorized reuse | Tests interrupted empty-directory cleanup, independent areas, and registry rollback after simulated Linux storage errors. | Android instrumentation |
+| `core/ProfileRestartTest.kt` | Forge `app/src/androidTest/java/com/cyclonecloak/app/ProfileActivationRestartTest.kt`, `ProfileCreationRestartTest.kt`, and `ProfileDeletionRestartTest.kt` in that directory | Owner-authorized reuse | Combines two separate Android instrumentation invocations around `am force-stop`; verifies a different PID and intact registry and storage. | Android instrumentation restart phases |
