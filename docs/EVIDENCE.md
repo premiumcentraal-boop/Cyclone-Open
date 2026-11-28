@@ -29,3 +29,7 @@ Pixel install, coexistence, Quick Settings, process death, and signing continuit
 - Rollback is a code revert. Registry schema, filename, and serialization remain compatible with the foundation. Keep the existing APK signer when updating an installed copy with saved data.
 - Pixel hardware and Android guest execution are `NOT_RUN`. No local KVM or authorized Cuttlefish node was available. Google Play rights and application compatibility remain unverified.
 - [Draft PR #2](https://github.com/premiumcentraal-boop/Cyclone-Open/pull/2) targets the foundation branch. Both PRs are open for review.
+
+## 28 November 2026 — CI debug signing
+
+Local Gradle verification passed `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest` with a disposable JKS injected through the workflow restore script. Both APKs and an app rebuild matched that certificate. The restore script rejected missing and malformed inputs and removed the temporary file after invalid input. The test keystore was disposed of. Owner secret provisioning, stable CI artifact comparison, and installed update data persistence are pending. [Signing setup](DEBUG_SIGNING.md)

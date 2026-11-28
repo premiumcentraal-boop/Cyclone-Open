@@ -15,6 +15,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }
+    providers.environmentVariable("CYCLONE_OPEN_CI_KEYSTORE").orNull?.let { keystorePath ->
+        signingConfigs.getByName("debug") {
+            storeFile = file(keystorePath)
+            storeType = "JKS"
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

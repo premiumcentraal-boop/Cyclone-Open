@@ -25,16 +25,33 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Restore the CI debug signing key
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          CYCLONE_OPEN_DEBUG_KEYSTORE_B64: ${{ secrets.CYCLONE_OPEN_DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [[ -n "$CYCLONE_OPEN_DEBUG_KEYSTORE_B64" ]]; then
+            bash .github/scripts/restore-debug-keystore.sh
+          else
+            echo '::warning::CYCLONE_OPEN_DEBUG_KEYSTORE_B64 is missing. Checks will run, and no APK will be published.'
+          fi
       - run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
       - name: Verify APK and record provenance
+        if: env.CYCLONE_OPEN_CI_KEYSTORE != ''
+        shell: bash
         run: |
           mkdir -p out
           cp app/build/outputs/apk/debug/app-debug.apk out/Cyclone-Open-alpha1-debug.apk
-          "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify out/Cyclone-Open-alpha1-debug.apk
+          signer=$("${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --print-certs out/Cyclone-Open-alpha1-debug.apk)
+          signer_sha=$(awk '/^Signer #1 certificate SHA-256 digest: / {print $NF}' <<< "$signer")
+          expected_sha=$(keytool -exportcert -storetype JKS -keystore "$CYCLONE_OPEN_CI_KEYSTORE" -storepass android -alias androiddebugkey | sha256sum | cut -d ' ' -f1)
+          test "$signer_sha" = "$expected_sha"
           cd out
+          printf '%s\n' "$signer_sha" > APK_SIGNER_SHA256
           sha256sum Cyclone-Open-alpha1-debug.apk > SHA256SUMS
           git -C .. rev-parse HEAD > SOURCE_SHA
       - uses: actions/upload-artifact@v4
+        if: env.CYCLONE_OPEN_CI_KEYSTORE != ''
         with:
           name: cyclone-open-debug
           path: out/
@@ -46,6 +63,9 @@ jobs:
           path: |
             app/build/reports/tests/
             app/build/reports/lint-results-debug.*
+      - name: Remove the CI debug signing key
+        if: always() && env.CYCLONE_OPEN_CI_KEYSTORE != ''
+        run: rm -f -- "$CYCLONE_OPEN_CI_KEYSTORE"
   registry-instrumentation:
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -60,6 +80,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Restore the CI debug signing key
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          CYCLONE_OPEN_DEBUG_KEYSTORE_B64: ${{ secrets.CYCLONE_OPEN_DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [[ -n "$CYCLONE_OPEN_DEBUG_KEYSTORE_B64" ]]; then
+            bash .github/scripts/restore-debug-keystore.sh
+          fi
       - name: Prepare Android 15 emulator
         run: |
           sudo setfacl -m "u:$(id -un):rw" /dev/kvm
@@ -98,3 +126,6 @@ jobs:
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
             emulator.log
+      - name: Remove the CI debug signing key
+        if: always() && env.CYCLONE_OPEN_CI_KEYSTORE != ''
+        run: rm -f -- "$CYCLONE_OPEN_CI_KEYSTORE"

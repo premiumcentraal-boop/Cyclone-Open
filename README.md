@@ -8,6 +8,7 @@ Independent Android-first cloud-phone launcher, alpha 0.1.0-alpha.1.
 ## What is not implemented
 Local Android VM, remote backend, guest companion, automatic cross-user installation, virtual hardware, persistent guest storage and actual guest switching. Drafts are never advertised as running. The current-user registry is not yet synchronized across Android users.
 ## Build
-JDK 17, Gradle 8.9, Android SDK 35. Run `gradle :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`. GitHub Actions uploads the debug APK and SHA-256 on successful checks. No release signing key, production publication or phone installation is attempted.
+JDK 17, Gradle 8.9, Android SDK 35. Run `gradle :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`. GitHub Actions publishes the debug APK and SHA-256 after successful checks when the repository signing secret is available.
+See [CI debug signing](docs/DEBUG_SIGNING.md) for update-compatible APK setup and verification.
 ## Upstream
 Newest independently located source candidate: Cyclone 5.0.0-alpha.155.dev1, code 309, commit 1ad783823c79960d9cc09935e8f46253c3823dcc. Published alpha.154 is the fallback, alpha.155 publication is unverified/previously reported failed. See docs/UPSTREAM.md. Physical Pixel acceptance is unverified.
