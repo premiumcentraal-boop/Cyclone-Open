@@ -47,8 +47,8 @@ internal fun RuntimeDoctorPanel(observation: ControllerObservation?, busy: Boole
     val remote = RuntimeDoctor.guest(RuntimeKind.REMOTE_VM, now)
     GlassPanel {
         Text("Guest readiness", style = MaterialTheme.typography.titleLarge)
-        Text("Local VM · ${local.availability.label()}")
-        Text("Remote VM · ${remote.availability.label()}")
+        Text("Local VM (Pixel AVF) · ${local.availability.label()}")
+        Text("Remote VM (Cuttlefish) · ${remote.availability.label()}")
         local.gates.forEach { (gate, status) ->
             val remoteStatus = remote.gates.getValue(gate)
             val result = if (status == remoteStatus) status.label() else "Local ${status.label()} · Remote ${remoteStatus.label()}"

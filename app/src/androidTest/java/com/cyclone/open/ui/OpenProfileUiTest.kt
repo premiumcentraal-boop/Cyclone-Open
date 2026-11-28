@@ -119,7 +119,8 @@ class OpenProfileUiTest {
     fun runtimeDoctorShowsSeparateBootAndEcosystemGates() {
         compose.onNodeWithText("Health").performClick()
         compose.onNodeWithText("Runtime Doctor").assertIsDisplayed()
-        compose.onNodeWithText("Local VM · Blocked").assertExists()
+        compose.onNodeWithText("Local VM (Pixel AVF) · Blocked").assertExists()
+        compose.onNodeWithText("Remote VM (Cuttlefish) · Blocked").assertExists()
         compose.onNodeWithText("Guest boot · Not run").assertExists()
         compose.onNodeWithText("Google Play licensing · Not run").assertExists()
         compose.onNodeWithText("Certification · Not run").assertExists()

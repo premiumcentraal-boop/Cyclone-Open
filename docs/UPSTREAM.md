@@ -60,3 +60,9 @@ These ports come from Cyclone-Cloak `62a05e4a966119908125016211096983cb258529`. 
 | `assets/reference-devices-v1.json` | Cloak `catalog/device-factory-v1.json` · `310104bf3781d273b74760dcf8483c7755f69831` | MIT for the donor inventory | Includes Pixel 7a-class and Pixel 8-class display references independently checked with Google. Suggested sizing is an Open draft choice. `ReferenceCatalogReaderTest`. |
 
 Google specifies 1080 × 2400 for the Pixel 7a and Pixel 8. The maximum refresh values for these references are 90 Hz and 120 Hz respectively. These are virtual display targets. [Google hardware specifications](https://support.google.com/pixelphone/answer/7158570/pixel-phone-hardware-tech-specs?hl=en-GB) · [Google refresh specifications](https://support.google.com/pixelphone/answer/6111557/manage-screen-and-display-settings-on-a-pixel-phone)
+
+### Independent lab evidence
+
+| Cyclone Open file | Pinned Cloak source and Git blob | License | Adaptation and tests |
+| --- | --- | --- | --- |
+| `tools/qualification/compatibility_harness.py` | `docs/SERVICE-SURFACE-ISOLATION-V2.md` · `9d931679c64c7c2f8c584e2da956460e89e7e2c2` and `docs/PLAY-SURFACE-CONTRACT-V1.md` · `45dd9fcda438054b11889d7934795d4d505eca61` | MIT for donor documentation | Adapts independently captured A/B observations and separate evidence gates. Open implementation validates runtime scope and evidence bytes offline. `test_runtime_qualification.py`. |
