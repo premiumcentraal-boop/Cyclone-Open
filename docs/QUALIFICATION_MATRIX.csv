@@ -19,11 +19,12 @@ AP12,APK,M00/M01,Accessibility,Large font and screen reader controls usable,NOT_
 AP13,APK,M00/M01,Picker pagination,All authorized image choices reachable,NOT_RUN,
 AP14,APK,M00/M01,Signing continuity,Owner-approved update key and migration evidence,BLOCKED,Local disposable-key signing verified. Build #7 had no repository signing secret and published no APK. Installed update data persistence remains untested.
 AP15,APK,M01,Registry disk full,Failed write preserves data with actionable error,CI_VERIFIED,Build #8 injected ENOSPC and EDQUOT after a partial write and verified unchanged bytes and a successful retry.
+AP16,APK,M01,Transactional profile volumes,Prepared volume precedes publication and startup recovers pending work,CI_VERIFIED,Build #9 verified legacy provisioning and kept committed data across a force-stop while removing an empty orphan.
 LC01,lifecycle,M03/M04,Duplicate request,One resource per idempotency key,NOT_RUN,
-LC02,lifecycle,M03/M04,Stale generation,Rejected,NOT_RUN,
-LC03,lifecycle,M03/M04,Wrong device,No input or data routed,NOT_RUN,
-LC04,lifecycle,M03/M04,Timeout,Safe host/previous viewer recovery,NOT_RUN,
-LC05,lifecycle,M03/M04,Process death,Journal reconciles actual state,NOT_RUN,
+LC02,lifecycle,M03/M04,Stale generation,Rejected,CI_VERIFIED,Build #10 tested rejected stale fixture confirmations and lease invalidation after successful confirmation.
+LC03,lifecycle,M03/M04,Wrong device,No input or data routed,CI_VERIFIED,Build #10 rejected wrong-target fixture confirmations before lease publication. Guest input transport remains unverified.
+LC04,lifecycle,M03/M04,Timeout,Safe host/previous viewer recovery,CI_VERIFIED,Build #10 preserved the prior host lease on fixture timeout. Actual viewer recovery remains unverified.
+LC05,lifecycle,M03/M04,Process death,Journal reconciles actual state,NOT_RUN,Build #10 recovered a persisted pending phase on journal reopen. Actual guest runtime reconciling remains unverified.
 LC06,lifecycle,M03/M04,Native separation,Two actual users with separate app data,NOT_RUN,
 LC07,lifecycle,M03/M04,Native return,Host return proven,NOT_RUN,
 LC08,lifecycle,M03/M04,Companion provisioning,Authorized install independently verified,NOT_RUN,

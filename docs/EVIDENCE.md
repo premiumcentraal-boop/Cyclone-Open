@@ -46,6 +46,14 @@ Build #8 passed on `4faf65e9b4ea62eb44bde326f43a20e68abd8b6f`. The Android 15 te
 
 New drafts prepare a private volume before the existing registry publishes them. App startup recovers the interrupted creation markers and provisions older drafts using their existing IDs. Recovery removes an empty unfinished volume, keeps prepared committed data, and defers cleanup if unexpected files are present. Removing a draft retains its profile files. The registry remains schema 1 with an optional volume marker. Profile volumes store controller files and preferences, and cache can be discarded by Android. Guest disks and guest filesystem behavior remain unverified.
 
+Build #9 passed on `f348689dc08e11acd878db1cfa4d50be59961895`. Thirteen Android 15 tests and both restart phases passed. The second process retained data from the committed volume and cleaned an orphan left before publication. [Build #9](https://github.com/premiumcentraal-boop/Cyclone-Open/actions/runs/46158646840) · [Instrumentation reports](https://github.com/premiumcentraal-boop/Cyclone-Open/actions/runs/46158646840/artifacts/15268792600)
+
 ## 28 November 2026 — M03 typed switch journal
 
 The switch coordinator writes preflight, prepare, and confirm to a separate AtomicFile journal before calling the runtime. Recovery clears an interrupted operation and retains the last confirmed lease. A confirmation with a different target or generation is rejected. The app routes its Android Home action through the host adapter, and draft selection still uses the registry. Guest adapters return `NOT_IMPLEMENTED`. Tests use a fake adapter for positive attachment and cover timeout, interruption, stale messages, and a wrong target.
+
+Build #10 passed on `c090890fe496d536686b47f511dbb10169be248b`. The downloaded Android 15 report contains 14 successful tests and two successful restart phases. Lifecycle unit tests used typed fixture responses. [Build #10](https://github.com/premiumcentraal-boop/Cyclone-Open/actions/runs/46158968287) · [Instrumentation reports](https://github.com/premiumcentraal-boop/Cyclone-Open/actions/runs/46158968287/artifacts/15268932739)
+
+## 28 November 2026 — profile gallery and Aurora
+
+The app uses the adapted glass theme and labelled profile cards. Glass selection motion snaps when Android disables animations. Aurora is an in-app sheet with access to Android Home and the saved draft list. The image chooser searches every imported reference, including results beyond the first eight. Compose tests cover semantic selection and action labels, the Home action in Aurora, and selecting a search result. Manual TalkBack, font-scale and device checks remain separate. [Source provenance](UPSTREAM.md)
