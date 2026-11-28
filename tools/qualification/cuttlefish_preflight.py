@@ -40,6 +40,8 @@ def artifact_status(artifact: Path | None, expected: str | None) -> str:
         return "PIN_REQUIRED"
     if not re.fullmatch(r"[0-9a-f]{64}", expected):
         return "INVALID_PIN"
+    if artifact.is_symlink():
+        return "SYMLINK_REJECTED"
     if not artifact.is_file():
         return "MISSING"
     try:

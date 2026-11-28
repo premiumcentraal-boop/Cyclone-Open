@@ -69,8 +69,8 @@
         "M01",
         "M03"
       ],
-      "status": "NOT_RUN",
-      "evidence": null
+      "status": "IN_PROGRESS",
+      "evidence": "RUNTIME_QUALIFICATION.md"
     },
     {
       "id": "M08",
@@ -131,8 +131,8 @@
         "M10",
         "M12"
       ],
-      "status": "NOT_RUN",
-      "evidence": null
+      "status": "IN_PROGRESS",
+      "evidence": "EVIDENCE.md"
     },
     {
       "id": "M14",
