@@ -3,7 +3,7 @@
  * at 62a05e4a966119908125016211096983cb258529:
  * android/app/src/main/java/dev/cyclone/cloak/ui/ProfileReadinessCard.kt.
  * MIT, Copyright (c) 2026 Cyclone Cloak contributors. See docs/licenses/Cyclone-Cloak-MIT.txt.
- * Displays read-only host facts alongside separate guest, licensing and certification gates.
+ * Displays read-only host and draft facts alongside separate guest, licensing and certification gates.
  */
 package com.cyclone.open.ui
 
@@ -14,7 +14,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import com.cyclone.open.core.BackendAvailability
 import com.cyclone.open.core.ControllerObservation
+import com.cyclone.open.core.DraftGrantStatus
+import com.cyclone.open.core.DraftHealth
+import com.cyclone.open.core.DraftVolumeStatus
 import com.cyclone.open.core.GateStatus
+import com.cyclone.open.core.PhoneRecord
 import com.cyclone.open.core.QualificationGate
 import com.cyclone.open.core.RuntimeDoctor
 import com.cyclone.open.core.RuntimeKind
@@ -55,6 +59,30 @@ internal fun RuntimeDoctorPanel(observation: ControllerObservation?, busy: Boole
             Text("${gate.label()} · $result", color = OpenGlass.Muted)
         }
         Text("Guest checks require a qualified Pixel backend or an authorized Cuttlefish host.", color = OpenGlass.Muted)
+    }
+}
+
+@Composable
+internal fun DraftHealthPanel(phone: PhoneRecord, observation: DraftHealth?) = GlassPanel {
+    Text("Draft checks", style = MaterialTheme.typography.titleLarge)
+    Text(phone.name)
+    val current = observation?.takeIf { it.phoneId == phone.id }
+    if (current == null) {
+        Text("Refresh checks for this draft.", color = OpenGlass.Muted)
+    } else {
+        val volume = when (current.volume) {
+            DraftVolumeStatus.PRESENT -> "Directory present"
+            DraftVolumeStatus.MISSING -> "Missing"
+            DraftVolumeStatus.UNKNOWN -> "Unknown"
+        }
+        val grant = when (current.imageGrant) {
+            DraftGrantStatus.HELD -> "Held"
+            DraftGrantStatus.MISSING -> "Missing"
+            DraftGrantStatus.UNKNOWN -> "Unknown"
+        }
+        Text("Draft volume · $volume")
+        Text("Image read grant · $grant")
+        Text("Image bytes require a checksum recheck in Images.", color = OpenGlass.Muted)
     }
 }
 

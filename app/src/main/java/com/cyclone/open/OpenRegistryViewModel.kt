@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.cyclone.open.core.CatalogUnavailableException
 import com.cyclone.open.core.ControllerObservation
 import com.cyclone.open.core.ControllerAction
+import com.cyclone.open.core.DraftHealth
 import com.cyclone.open.core.DraftRequest
 import com.cyclone.open.core.DraftReview
 import com.cyclone.open.core.DraftReviewException
@@ -18,6 +19,7 @@ import com.cyclone.open.core.InsufficientProfileStorageException
 import com.cyclone.open.core.PhoneVolumeRepository
 import com.cyclone.open.core.ProfileBackup
 import com.cyclone.open.core.ProfileBackups
+import com.cyclone.open.core.ProfileStorage
 import com.cyclone.open.core.ReferenceCatalog
 import com.cyclone.open.core.ReferenceCatalogReader
 import com.cyclone.open.core.ReferenceKey
@@ -51,6 +53,7 @@ internal class OpenRegistryViewModel(application: Application) : AndroidViewMode
     private val store = RegistryStore.get(application)
     private val volumes = PhoneVolumeRepository(application, store)
     private val images = ImageReferences(store, application.contentResolver)
+    private val profileStorage = ProfileStorage(application)
     private val savedBackups = ProfileBackups(JsonDirectory(File(application.noBackupFilesDir, "draft-backups-v1")))
     private val logBus = LogBus.get(application)
     private val backupState = MutableStateFlow<List<Pair<String, ProfileBackup>>>(emptyList())
@@ -58,11 +61,13 @@ internal class OpenRegistryViewModel(application: Application) : AndroidViewMode
     private val catalogState = MutableStateFlow<CatalogState>(CatalogState.Loading)
     private val draftReview = MutableStateFlow<DraftReview?>(null)
     private val controllerObservation = MutableStateFlow<ControllerObservation?>(null)
+    private val draftObservation = MutableStateFlow<DraftHealth?>(null)
     val registry = store.committed
     val operation = operationState.asStateFlow()
     val catalog = catalogState.asStateFlow()
     val review = draftReview.asStateFlow()
     val hostObservation = controllerObservation.asStateFlow()
+    val draftHealth = draftObservation.asStateFlow()
     val backups = backupState.asStateFlow()
     val history = logBus.history
 
@@ -76,13 +81,15 @@ internal class OpenRegistryViewModel(application: Application) : AndroidViewMode
         } catch (_: CatalogUnavailableException) {
             CatalogState.Unavailable
         }
-        volumes.open()
+        val current = volumes.open()
         images.reconcile()
+        draftObservation.value = RuntimeDoctor.inspectDraft(current, profileStorage, images)
         backupState.value = savedBackups.list()
     }
 
     fun refreshHealth() = submit(closeDialog = false) {
         controllerObservation.value = RuntimeDoctor.observe(getApplication())
+        draftObservation.value = store.committed.value?.let { RuntimeDoctor.inspectDraft(it, profileStorage, images) }
     }
 
     fun reviewDraft(request: DraftRequest) = submit(closeDialog = false) {

@@ -30,6 +30,7 @@ import com.cyclone.open.ui.DraftReviewPanel
 import com.cyclone.open.ui.GlassPanel
 import com.cyclone.open.ui.OpenGlass
 import com.cyclone.open.ui.OperationHistoryPanel
+import com.cyclone.open.ui.DraftHealthPanel
 import com.cyclone.open.ui.PhoneProfileCard
 import com.cyclone.open.ui.ReferenceChoices
 import com.cyclone.open.ui.RuntimeDoctorPanel
@@ -63,6 +64,7 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
     val catalog = (catalogState as? CatalogState.Loaded)?.catalog
     val draftReview by controller.review.collectAsState()
     val hostObservation by controller.hostObservation.collectAsState()
+    val draftHealth by controller.draftHealth.collectAsState()
     val backups by controller.backups.collectAsState()
     val history by controller.history.collectAsState()
     val busy = operation.busy
@@ -140,7 +142,10 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
         bottomBar={ NavigationBar(containerColor=panel) {
             Page.entries.forEach { p ->
                 val label=when(p){Page.PHONES->"Phones";Page.IMAGES->"Images";Page.HEALTH->"Health"}
-                NavigationBarItem(selected=page==p,onClick={page=p},icon={Text(when(p){Page.PHONES->"▣";Page.IMAGES->"↓";Page.HEALTH->"◉"},Modifier.clearAndSetSemantics { },fontSize=22.sp)},label={Text(label)})
+                NavigationBarItem(selected=page==p,onClick={
+                    page=p
+                    if (p == Page.HEALTH) controller.refreshHealth()
+                },icon={Text(when(p){Page.PHONES->"▣";Page.IMAGES->"↓";Page.HEALTH->"◉"},Modifier.clearAndSetSemantics { },fontSize=22.sp)},label={Text(label)})
             }
         }}
     ) { padding ->
@@ -155,6 +160,9 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
             operation.notice?.let { notice -> item { Text(notice, color = mint) } }
             if (page == Page.HEALTH) {
                 item { RuntimeDoctorPanel(hostObservation, busy, controller::refreshHealth) }
+                r?.phones?.firstOrNull { it.id == r.selected }?.let { phone ->
+                    item { DraftHealthPanel(phone, draftHealth) }
+                }
                 item { OperationHistoryPanel(history) }
                 item { GlassPanel {
                     Text("Quick access", style = MaterialTheme.typography.titleLarge)

@@ -23,7 +23,7 @@ Owner-authorized Pixel installation and both tile paths remain tracked separatel
 
 Whole-filesystem exhaustion, sudden power loss, live third-party document-provider behavior, manual TalkBack, and updates signed by the owner's key remain unverified.
 
-The Cloak reuse handoff builds on the C1/C2 glass gallery and Aurora. C3 supplies strict bundled references. C4 adds draft review, settings backup and restore, and bounded operation outcomes around the existing volume transaction. C5 adds read-only host observations and explicit guest gates. C6 has a scoped evidence evaluator and fixture tests. C8 has an offline A/B test harness that checks separately captured observations. Authenticated guest evidence, C7 guest sessions and C8 lab measurements require an actual backend. [Source provenance](UPSTREAM.md) · [Runtime qualification](RUNTIME_QUALIFICATION.md)
+The Cloak reuse handoff builds on the C1/C2 glass gallery and Aurora. C3 supplies strict bundled references. C4 adds draft review, settings backup and restore, and bounded operation outcomes around the existing volume transaction. C5 adds read-only host and selected-draft observations and explicit guest gates. C6 has a scoped evidence evaluator and fixture tests. C8 has an offline A/B test harness that checks separately captured observations. Authenticated guest evidence, C7 guest sessions and C8 lab measurements require an actual backend. [Source provenance](UPSTREAM.md) · [Runtime qualification](RUNTIME_QUALIFICATION.md)
 
 ## Access needed for first guest boot
 
