@@ -1,3 +1,8 @@
+/*
+ * Copied from premiumcentraal-boop/Cyclone @ 1ad783823c79960d9cc09935e8f46253c3823dcc
+ * apps/mobile/app/src/main/java/com/cyclone/mobile/ui/overlay/glass/GlassOptics.kt
+ * Proprietary source, owner-authorized reuse. Changed package and one documentation link.
+ */
 package com.cyclone.open.ui
 
 import kotlin.math.abs

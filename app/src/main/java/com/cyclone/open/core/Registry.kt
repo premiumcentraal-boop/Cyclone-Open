@@ -10,7 +10,14 @@ const val MAX_IMAGE_BYTES = 16L * 1024 * 1024 * 1024
 enum class RuntimeKind { HOST, LOCAL_VM, REMOTE_VM }
 enum class RuntimeState { HOST_AVAILABLE, NOT_IMPLEMENTED }
 data class ImageRecord(val id: String, val name: String, val androidVersion: Int, val uri: String, val sha256: String, val bytes: Long)
-data class PhoneRecord(val id: String, val name: String, val runtime: RuntimeKind, val imageId: String, val memoryMiB: Int)
+data class PhoneRecord(
+    val id: String,
+    val name: String,
+    val runtime: RuntimeKind,
+    val imageId: String,
+    val memoryMiB: Int,
+    val volumePrepared: Boolean = false
+)
 data class Registry(val images: List<ImageRecord> = emptyList(), val phones: List<PhoneRecord> = emptyList(), val selected: String = HOST_ID)
 
 object Rules {
@@ -57,14 +64,23 @@ object Rules {
 }
 
 data class RuntimeStatus(val state: RuntimeState, val detail: String)
-interface PhoneRuntime { fun status(): RuntimeStatus }
-object HostRuntime : PhoneRuntime {
-    override fun status() = RuntimeStatus(RuntimeState.HOST_AVAILABLE, "Current Android user")
+internal interface PhoneRuntime {
+    fun status(): RuntimeStatus
+    suspend fun step(stage: SwitchStage, lease: GenerationLease): RuntimeStepResult
 }
-class UnavailableRuntime(private val kind: RuntimeKind) : PhoneRuntime {
+internal object HostRuntime : PhoneRuntime {
+    override fun status() = RuntimeStatus(RuntimeState.HOST_AVAILABLE, "Current Android user")
+    override suspend fun step(stage: SwitchStage, lease: GenerationLease) =
+        if (lease.target == PhoneTarget.Host) RuntimeStepResult.Verified(lease)
+        else RuntimeStepResult.Rejected(SwitchFailure.WRONG_TARGET)
+}
+internal class UnavailableRuntime(private val kind: RuntimeKind) : PhoneRuntime {
     override fun status() = RuntimeStatus(RuntimeState.NOT_IMPLEMENTED, when (kind) {
         RuntimeKind.LOCAL_VM -> "Local Android guest backend not implemented. Pixel AVF and graphics require verification."
         RuntimeKind.REMOTE_VM -> "Remote runtime not connected. No server configured."
         RuntimeKind.HOST -> error("Use HostRuntime")
     })
+
+    override suspend fun step(stage: SwitchStage, lease: GenerationLease) =
+        RuntimeStepResult.Rejected(SwitchFailure.NOT_IMPLEMENTED)
 }

@@ -25,16 +25,38 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Restore the CI debug signing key
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          CYCLONE_OPEN_DEBUG_KEYSTORE_B64: ${{ secrets.CYCLONE_OPEN_DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [[ -n "$CYCLONE_OPEN_DEBUG_KEYSTORE_B64" ]]; then
+            bash .github/scripts/restore-debug-keystore.sh
+          else
+            echo '::warning::CYCLONE_OPEN_DEBUG_KEYSTORE_B64 is missing. Checks will run, and no APK will be published.'
+          fi
       - run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+      - name: Verify bundled upstream notice
+        shell: bash
+        run: |
+          unzip -p app/build/outputs/apk/debug/app-debug.apk assets/Cyclone-Cloak-MIT.txt \
+            | cmp - docs/licenses/Cyclone-Cloak-MIT.txt
       - name: Verify APK and record provenance
+        if: env.CYCLONE_OPEN_CI_KEYSTORE != ''
+        shell: bash
         run: |
           mkdir -p out
           cp app/build/outputs/apk/debug/app-debug.apk out/Cyclone-Open-alpha1-debug.apk
-          "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify out/Cyclone-Open-alpha1-debug.apk
+          signer=$("${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --print-certs out/Cyclone-Open-alpha1-debug.apk)
+          signer_sha=$(awk '/^Signer #1 certificate SHA-256 digest: / {print $NF}' <<< "$signer")
+          expected_sha=$(keytool -exportcert -storetype JKS -keystore "$CYCLONE_OPEN_CI_KEYSTORE" -storepass android -alias androiddebugkey | sha256sum | cut -d ' ' -f1)
+          test "$signer_sha" = "$expected_sha"
           cd out
+          printf '%s\n' "$signer_sha" > APK_SIGNER_SHA256
           sha256sum Cyclone-Open-alpha1-debug.apk > SHA256SUMS
           git -C .. rev-parse HEAD > SOURCE_SHA
       - uses: actions/upload-artifact@v4
+        if: env.CYCLONE_OPEN_CI_KEYSTORE != ''
         with:
           name: cyclone-open-debug
           path: out/
@@ -46,3 +68,85 @@ jobs:
           path: |
             app/build/reports/tests/
             app/build/reports/lint-results-debug.*
+      - name: Remove the CI debug signing key
+        if: always() && env.CYCLONE_OPEN_CI_KEYSTORE != ''
+        run: rm -f -- "$CYCLONE_OPEN_CI_KEYSTORE"
+  registry-instrumentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Restore the CI debug signing key
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          CYCLONE_OPEN_DEBUG_KEYSTORE_B64: ${{ secrets.CYCLONE_OPEN_DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [[ -n "$CYCLONE_OPEN_DEBUG_KEYSTORE_B64" ]]; then
+            bash .github/scripts/restore-debug-keystore.sh
+          fi
+      - name: Prepare Android 15 emulator
+        run: |
+          sudo setfacl -m "u:$(id -un):rw" /dev/kvm
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          avdmanager="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
+          emulator="$ANDROID_HOME/emulator/emulator"
+          image='system-images;android-35;default;x86_64'
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/cyclone-avds"
+          mkdir -p "$ANDROID_AVD_HOME"
+          "$sdkmanager" 'platforms;android-35' 'build-tools;34.0.0' 'platform-tools' 'emulator' "$image"
+          "$avdmanager" create avd --name cyclone-registry --package "$image" --device pixel_6 --force
+          "$emulator" -list-avds | grep -Fx cyclone-registry
+          printf 'ANDROID_AVD_HOME=%s\n' "$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
+      - name: Run registry instrumentation
+        shell: bash
+        run: |
+          adb="$ANDROID_HOME/platform-tools/adb"
+          "$adb" start-server
+          "$ANDROID_HOME/emulator/emulator" -avd cyclone-registry -port 5554 -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > emulator.log 2>&1 &
+          emulator_pid=$!
+          trap 'kill "$emulator_pid" 2>/dev/null || true' EXIT
+          export ANDROID_SERIAL=emulator-5554
+          boot_deadline=$((SECONDS + 300))
+          until [ "$("$adb" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do
+            if ! kill -0 "$emulator_pid" 2>/dev/null || [ "$SECONDS" -ge "$boot_deadline" ]; then
+              tail -n 100 emulator.log
+              exit 1
+            fi
+            sleep 2
+          done
+          gradle --no-daemon :app:connectedDebugAndroidTest \
+            -Pandroid.testInstrumentationRunnerArguments.notAnnotation=com.cyclone.open.core.ProcessRestartCase
+          "$adb" install -r -t app/build/outputs/apk/debug/app-debug.apk
+          "$adb" install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          for phase in beforeForceStop afterForceStop; do
+            "$adb" shell am instrument -w -r \
+              -e class "com.cyclone.open.core.ProfileRestartTest#$phase" \
+              -e restartRun "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+              com.cyclone.open.test/androidx.test.runner.AndroidJUnitRunner \
+              | tr -d '\r' | tee "restart-$phase.log"
+            grep -Fx 'OK (1 test)' "restart-$phase.log"
+            if [[ "$phase" == beforeForceStop ]]; then
+              "$adb" shell am force-stop com.cyclone.open
+            fi
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: registry-instrumentation-reports
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+            emulator.log
+            restart-*.log
+      - name: Remove the CI debug signing key
+        if: always() && env.CYCLONE_OPEN_CI_KEYSTORE != ''
+        run: rm -f -- "$CYCLONE_OPEN_CI_KEYSTORE"
