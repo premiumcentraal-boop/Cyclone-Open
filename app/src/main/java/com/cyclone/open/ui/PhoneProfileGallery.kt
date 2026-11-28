@@ -78,7 +78,8 @@ internal fun PhoneProfileCard(
     onSelect: () -> Unit,
     onRename: () -> Unit,
     onRemove: () -> Unit,
-    referenceLabel: String? = null
+    referenceLabel: String? = null,
+    onBackup: (() -> Unit)? = null
 ) {
     val runtimeDetail = UnavailableRuntime(phone.runtime).status().detail
     GlassPanel(selected = selected) {
@@ -110,6 +111,7 @@ internal fun PhoneProfileCard(
         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             GlassTool("Select", phone.name, !busy, onSelect)
             GlassTool("Rename", phone.name, !busy, onRename)
+            onBackup?.let { GlassTool("Back up", phone.name, !busy, it) }
             GlassTool("Remove", phone.name, !busy, onRemove)
         }
     }

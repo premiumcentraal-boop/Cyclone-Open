@@ -40,3 +40,13 @@ On 28 November 2026, Cloak `main` still pointed to the RC3 calm-glass merge `62a
 | `ui/RuntimeDoctorPanel.kt` | Cloak `android/app/src/main/java/dev/cyclone/cloak/ui/ProfileReadinessCard.kt`, blob `543530c3e9cce09ab28d3794cfd55fb0b3d908cd` | MIT | Reuses readiness rows with measured controller facts and explicit guest blockers. | `OpenProfileUiTest` |
 
 The Pixel 7-class portrait dimensions and maximum refresh were independently checked against Google's hardware specifications. Samsung's support specifications supply the base Galaxy S22 dimensions, and its Global Newsroom supplies the refresh rate. The donor catalog contains a Galaxy S23 entry. The S22-class record uses Samsung's S22 sources. Both records are revision 1. The 420 dpi and 3 GiB values are Cyclone Open draft recommendations, distinct from physical panel density and actual runtime allocations. Only the cited factual values are reproduced, with no third-party imagery or firmware. [Google Pixel 7 specifications](https://support.google.com/pixelphone/answer/7158570/pixel-phone-hardware-tech-specs?hl=en-GB) · [Samsung Galaxy S22 dimensions](https://www.samsung.com/sg/support/mobile-devices/enjoy-the-epic-standard-of-smartphone-experiences-with-the-galaxy-s22-series/) · [Samsung Galaxy S22 refresh](https://news.samsung.com/global/new-samsung-galaxy-s22-and-s22-plus-deliver-revolutionary-camera-experiences-day-and-night)
+
+### Draft backup ports
+
+These ports come from Cyclone-Cloak `62a05e4a966119908125016211096983cb258529`. The MIT notice is bundled in the APK.
+
+| Cyclone Open file | Pinned donor path and Git blob | License | Adaptation and tests |
+| --- | --- | --- | --- |
+| `core/StrictJson.kt` | `android/app/src/main/java/dev/cyclone/cloak/forge/StrictJson.kt` · `7d783b2f319a51d1e88283158d44d73e332031bc` | MIT | Rejects duplicate names, lenient grammar and trailing input. Adds bounded UTF-8 reads for catalog and backups. `ProfileBackupTest` and `ReferenceCatalogReaderTest`. |
+| `core/JsonDirectory.kt` | `android/app/src/main/java/dev/cyclone/cloak/data/JsonDirectory.kt` · `9155dd6f3943779787db31afa0165fab5895c458` | MIT | Canonical UUID filenames, synced staged writes, atomic directory swap, restart recovery. `ProfileBackupTest`. |
+| `core/ProfileBackup.kt` | `android/app/src/main/java/dev/cyclone/cloak/forge/ProfileBackup.kt` · `8a655c6c351c8d3e5db5fd436b63c5c2ec3b626b` | MIT | Rewrites the backup schema around draft settings and an image digest. Restore creates a new reviewed draft. `ProfileBackupTest`. |
