@@ -10,7 +10,14 @@ const val MAX_IMAGE_BYTES = 16L * 1024 * 1024 * 1024
 enum class RuntimeKind { HOST, LOCAL_VM, REMOTE_VM }
 enum class RuntimeState { HOST_AVAILABLE, NOT_IMPLEMENTED }
 data class ImageRecord(val id: String, val name: String, val androidVersion: Int, val uri: String, val sha256: String, val bytes: Long)
-data class PhoneRecord(val id: String, val name: String, val runtime: RuntimeKind, val imageId: String, val memoryMiB: Int)
+data class PhoneRecord(
+    val id: String,
+    val name: String,
+    val runtime: RuntimeKind,
+    val imageId: String,
+    val memoryMiB: Int,
+    val volumePrepared: Boolean = false
+)
 data class Registry(val images: List<ImageRecord> = emptyList(), val phones: List<PhoneRecord> = emptyList(), val selected: String = HOST_ID)
 
 object Rules {

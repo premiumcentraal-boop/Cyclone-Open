@@ -52,7 +52,11 @@ class RegistryStore internal constructor(
                 ImageRecord(it.getString("id"), it.getString("name"), it.getInt("version"), it.getString("uri"), it.getString("sha256"), it.getLong("bytes"))
             } },
             phones = (0 until phones.length()).map { i -> phones.getJSONObject(i).let {
-                PhoneRecord(it.getString("id"), it.getString("name"), RuntimeKind.valueOf(it.getString("runtime")), it.getString("image"), it.getInt("memory"))
+                PhoneRecord(
+                    it.getString("id"), it.getString("name"), RuntimeKind.valueOf(it.getString("runtime")),
+                    it.getString("image"), it.getInt("memory"),
+                    if (it.has("volumePrepared")) it.get("volumePrepared") as Boolean else false
+                )
             } },
             selected = o.getString("selected")
         ))
@@ -68,7 +72,8 @@ class RegistryStore internal constructor(
                 JSONObject().put("id", it.id).put("name", it.name).put("version", it.androidVersion).put("uri", it.uri).put("sha256", it.sha256).put("bytes", it.bytes)
             }))
             .put("phones", JSONArray(next.phones.map {
-                JSONObject().put("id", it.id).put("name", it.name).put("runtime", it.runtime.name).put("image", it.imageId).put("memory", it.memoryMiB)
+                JSONObject().put("id", it.id).put("name", it.name).put("runtime", it.runtime.name)
+                    .put("image", it.imageId).put("memory", it.memoryMiB).put("volumePrepared", it.volumePrepared)
             })).toString().toByteArray(Charsets.UTF_8)
         try {
             val out = file.startWrite()

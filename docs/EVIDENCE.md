@@ -34,6 +34,14 @@ Pixel install, coexistence, Quick Settings, process death, and signing continuit
 
 Local Gradle verification passed `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest` with a disposable JKS injected through the workflow restore script. Both APKs and an app rebuild matched that certificate. The restore script rejected missing and malformed inputs and removed the temporary file after invalid input. The test keystore was disposed of. Owner secret provisioning, stable CI artifact comparison, and installed update data persistence are pending. [Signing setup](DEBUG_SIGNING.md)
 
+Build #7 passed on `bc07d23b50d2c25755c3af3c0b5253a10da75020` and published test and lint reports. The signing secret was unavailable, so the workflow withheld the APK artifact. [Build #7](https://github.com/premiumcentraal-boop/Cyclone-Open/actions/runs/46157681556)
+
 ## 28 November 2026 — M01 storage and recovery port
 
 The Forge storage adapter adds private files, preferences, and cache areas and maps `ENOSPC` and `EDQUOT` to an actionable error. Android tests inject those errno values after a partial registry write. They compare the committed bytes and retry through the existing `RegistryStore`. A separate CI sequence force-stops the application between two instrumentation invocations and asserts a different process ID before checking state. These faults model a disk-full write. Whole-filesystem exhaustion and sudden power loss are separate cases. [Source provenance](UPSTREAM.md)
+
+Build #8 passed on `4faf65e9b4ea62eb44bde326f43a20e68abd8b6f`. The Android 15 test archive shows ten instrumentation cases and both restart phases passing. I matched its ZIP digest before inspecting the results. [Build #8](https://github.com/premiumcentraal-boop/Cyclone-Open/actions/runs/46158138124) · [Instrumentation reports](https://github.com/premiumcentraal-boop/Cyclone-Open/actions/runs/46158138124/artifacts/15268856452)
+
+## 28 November 2026 — transactionally provisioned profile volumes
+
+New drafts prepare a private volume before the existing registry publishes them. App startup recovers the interrupted creation markers and provisions older drafts using their existing IDs. Recovery removes an empty unfinished volume, keeps prepared committed data, and defers cleanup if unexpected files are present. Removing a draft retains its profile files. The registry remains schema 1 with an optional volume marker. Profile volumes store controller files and preferences, and cache can be discarded by Android. Guest disks and guest filesystem behavior remain unverified.

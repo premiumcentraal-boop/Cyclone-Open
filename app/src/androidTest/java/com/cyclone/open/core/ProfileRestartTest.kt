@@ -48,27 +48,37 @@ class ProfileRestartTest {
         val remove = store.change { Rules.addPhone(it, "Remove", imageId, RuntimeKind.REMOTE_VM, 2048) }.selected
         store.change { Rules.rename(Rules.select(Rules.remove(it, remove), keep), keep, "Renamed") }
         val storage = ProfileStorage(File(directory, "data"), File(directory, "cache"))
-        storage.prepare(UUID.fromString(keep))
+        val journal = PhoneVolumeJournal(File(directory, "pending"))
+        PhoneVolumeRepository(store, storage, journal).open()
         storage.write(UUID.fromString(keep), ProfileStorage.Area.PREFERENCES, "owner-data", byteArrayOf(4))
+        // Leave one published and one unregistered volume pending when the process ends.
+        val incomplete = UUID.randomUUID()
+        journal.begin(UUID.fromString(keep))
+        journal.begin(incomplete)
+        storage.prepare(incomplete)
         AtomicFile(file).startWrite().use { staged ->
             staged.write("{\"schema\":1,".toByteArray())
             staged.fd.sync()
         }
-        File(directory, "phase").writeText("${Process.myPid()}\n$keep")
+        File(directory, "phase").writeText("${Process.myPid()}\n$keep\n$incomplete")
     }
 
     @Test
     fun afterForceStop() {
         val directory = fixture
         try {
-            val (previousPid, keep) = File(directory, "phase").readLines()
+            val (previousPid, keep, incomplete) = File(directory, "phase").readLines()
             assertNotEquals(previousPid.toInt(), Process.myPid())
-            val registry = RegistryStore(File(directory, "registry-v1.json")).read()
+            val store = RegistryStore(File(directory, "registry-v1.json"))
+            val storage = ProfileStorage(File(directory, "data"), File(directory, "cache"))
+            val journal = PhoneVolumeJournal(File(directory, "pending"))
+            val registry = PhoneVolumeRepository(store, storage, journal).open()
             assertEquals(keep, registry.selected)
             assertEquals(keep, registry.phones.single().id)
             assertEquals("Renamed", registry.phones.single().name)
-            val storage = ProfileStorage(File(directory, "data"), File(directory, "cache"))
             assertArrayEquals(byteArrayOf(4), storage.read(UUID.fromString(keep), ProfileStorage.Area.PREFERENCES, "owner-data"))
+            assertEquals(false, storage.isPrepared(UUID.fromString(incomplete)))
+            assertEquals(emptyList<UUID>(), journal.pending())
             println("Registry reopen verified across processes $previousPid and ${Process.myPid()}.")
         } finally {
             directory.deleteRecursively()

@@ -24,6 +24,53 @@ internal fun storageFull(error: Throwable): Boolean = generateSequence(error) { 
 }
 
 private val storageKeyPattern = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,119}")
+private const val PRIVATE_DIRECTORY_MODE = 0x1C0 // 0700
+
+internal inline fun <T> profileStorageIo(operation: () -> T): T = try {
+    operation()
+} catch (error: ErrnoException) {
+    throw profileStorageError(error)
+} catch (error: IOException) {
+    throw profileStorageError(error)
+}
+
+internal fun profileStorageError(error: Exception): IOException = when {
+    error is InsufficientProfileStorageException -> error
+    storageFull(error) -> InsufficientProfileStorageException(error)
+    else -> IOException("Could not access profile storage.", error)
+}
+
+internal fun ensureProfileDirectory(directory: File) {
+    if (profileDirectoryExists(directory)) return
+    try {
+        Os.mkdir(directory.path, PRIVATE_DIRECTORY_MODE)
+    } catch (error: ErrnoException) {
+        if (error.errno != OsConstants.EEXIST || !profileDirectoryExists(directory)) throw error
+    }
+}
+
+internal fun profileDirectoryExists(entry: File): Boolean {
+    val mode = modeIfPresent(entry) ?: return false
+    if (!OsConstants.S_ISDIR(mode)) throw IOException("Invalid profile storage directory.")
+    return true
+}
+
+internal fun syncProfileDirectory(directory: File) {
+    val fd = Os.open(directory.path, OsConstants.O_RDONLY, 0)
+    try {
+        if (!OsConstants.S_ISDIR(Os.fstat(fd).st_mode)) throw IOException("Invalid profile storage directory.")
+        Os.fsync(fd)
+    } finally {
+        Os.close(fd)
+    }
+}
+
+private fun modeIfPresent(entry: File): Int? = try {
+    Os.lstat(entry.path).st_mode
+} catch (error: ErrnoException) {
+    if (error.errno != OsConstants.ENOENT) throw error
+    null
+}
 
 internal class ProfileStorage(
     private val dataRoot: File,
@@ -37,34 +84,37 @@ internal class ProfileStorage(
 
     enum class Area { FILES, PREFERENCES, CACHE }
 
-    fun prepare(id: UUID) = storageIo {
-        ensureDirectory(dataRoot)
+    fun prepare(id: UUID) = profileStorageIo {
+        ensureProfileDirectory(dataRoot)
         createProfileDirectory(File(dataRoot, id.toString()))
+        syncProfileDirectory(dataRoot)
+        syncProfileDirectory(requireNotNull(dataRoot.parentFile))
     }
 
-    fun isPrepared(id: UUID): Boolean = storageIo {
-        directoryExists(dataRoot) && directoryExists(File(dataRoot, id.toString()))
+    fun isPrepared(id: UUID): Boolean = profileStorageIo {
+        profileDirectoryExists(dataRoot) && profileDirectoryExists(File(dataRoot, id.toString()))
     }
 
-    fun discardIncomplete(id: UUID) = storageIo {
+    fun discardIncomplete(id: UUID) = profileStorageIo {
         if (isPrepared(id)) {
             // An interrupted prepare owns only an empty directory. Preserve unexpected contents.
             Os.remove(File(dataRoot, id.toString()).path)
+            syncProfileDirectory(dataRoot)
         }
     }
 
-    fun read(id: UUID, area: Area, key: String): ByteArray? = storageIo {
+    fun read(id: UUID, area: Area, key: String): ByteArray? = profileStorageIo {
         val target = File(areaDirectory(id, area), checkedKey(key))
-        val mode = modeIfPresent(target) ?: return@storageIo null
+        val mode = modeIfPresent(target) ?: return@profileStorageIo null
         if (!OsConstants.S_ISREG(mode)) throw IOException("Invalid profile storage entry.")
         target.readBytes()
     }
 
-    fun write(id: UUID, area: Area, key: String, value: ByteArray) = storageIo {
+    fun write(id: UUID, area: Area, key: String, value: ByteArray) = profileStorageIo {
         val directory = areaDirectory(id, area)
         val target = File(directory, checkedKey(key))
-        if (area == Area.CACHE) ensureDirectory(cacheRoot)
-        ensureDirectory(directory)
+        if (area == Area.CACHE) ensureProfileDirectory(cacheRoot)
+        ensureProfileDirectory(directory)
         val temp = File.createTempFile(".write-", ".tmp", directory)
         try {
             FileOutputStream(temp).use { output ->
@@ -72,6 +122,10 @@ internal class ProfileStorage(
                 if (area != Area.CACHE) output.fd.sync()
             }
             Os.rename(temp.path, target.path)
+            if (area != Area.CACHE) {
+                syncProfileDirectory(directory)
+                syncProfileDirectory(requireNotNull(directory.parentFile))
+            }
         } finally {
             temp.delete()
         }
@@ -85,53 +139,13 @@ internal class ProfileStorage(
             Area.PREFERENCES -> File(profile, "preferences")
             Area.CACHE -> File(cacheRoot, id.toString())
         }
-        if (area == Area.CACHE) directoryExists(cacheRoot)
-        directoryExists(directory)
+        if (area == Area.CACHE) profileDirectoryExists(cacheRoot)
+        profileDirectoryExists(directory)
         return directory
     }
 
     private fun checkedKey(value: String): String {
         require(storageKeyPattern.matches(value)) { "Invalid profile storage key." }
         return value
-    }
-
-    private fun ensureDirectory(directory: File) {
-        if (directoryExists(directory)) return
-        try {
-            Os.mkdir(directory.path, PRIVATE_DIRECTORY_MODE)
-        } catch (error: ErrnoException) {
-            if (error.errno != OsConstants.EEXIST || !directoryExists(directory)) throw error
-        }
-    }
-
-    private fun directoryExists(entry: File): Boolean {
-        val mode = modeIfPresent(entry) ?: return false
-        if (!OsConstants.S_ISDIR(mode)) throw IOException("Invalid profile storage directory.")
-        return true
-    }
-
-    private fun modeIfPresent(entry: File): Int? = try {
-        Os.lstat(entry.path).st_mode
-    } catch (error: ErrnoException) {
-        if (error.errno != OsConstants.ENOENT) throw error
-        null
-    }
-
-    private inline fun <T> storageIo(operation: () -> T): T = try {
-        operation()
-    } catch (error: ErrnoException) {
-        throw storageError(error)
-    } catch (error: IOException) {
-        throw storageError(error)
-    }
-
-    private fun storageError(error: Exception): IOException = when {
-        error is InsufficientProfileStorageException -> error
-        storageFull(error) -> InsufficientProfileStorageException(error)
-        else -> IOException("Could not access profile storage.", error)
-    }
-
-    private companion object {
-        const val PRIVATE_DIRECTORY_MODE = 0x1C0 // 0700
     }
 }

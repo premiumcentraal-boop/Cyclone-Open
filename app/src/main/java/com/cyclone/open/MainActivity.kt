@@ -60,6 +60,7 @@ private fun GlassCard(modifier: Modifier = Modifier, selected: Boolean = false, 
 @Composable
 private fun OpenScreen(activity: ComponentActivity) {
     val store=remember { RegistryStore.get(activity) }
+    val volumes = remember(store) { PhoneVolumeRepository(activity, store) }
     var registry by remember { mutableStateOf<Registry?>(null) }
     var page by remember { mutableStateOf(Page.PHONES) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -83,18 +84,19 @@ private fun OpenScreen(activity: ComponentActivity) {
             else -> "Operation failed. Existing records were not intentionally changed."
         }
     }
-    fun refresh() { scope.launch { try { registry=withContext(Dispatchers.IO){store.read()}; error=null } catch(e: CancellationException){throw e} catch(e:Exception){showError(e)} } }
+    fun refresh() { scope.launch { try { registry=withContext(Dispatchers.IO){volumes.open()}; error=null } catch(e: CancellationException){throw e} catch(e:Exception){showError(e)} } }
     LaunchedEffect(Unit) { refresh() }
-    fun mutate(block: (Registry)->Registry) {
+    fun commit(operation: () -> Registry) {
         if(busy) return
         busy=true;error=null
         scope.launch {
-            try { registry=withContext(Dispatchers.IO){store.change(block)};dialog=null }
+            try { registry=withContext(Dispatchers.IO) { operation() };dialog=null }
             catch(e:CancellationException){throw e}
             catch(e:Exception){showError(e)}
             finally{busy=false}
         }
     }
+    fun mutate(block: (Registry)->Registry) = commit { store.change(block) }
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { chosen ->
         if(chosen!=null){uri=chosen;name="Android image";digest="";version=15;dialog=DialogKind.IMPORT}
     }
@@ -192,7 +194,7 @@ private fun OpenScreen(activity: ComponentActivity) {
                     OutlinedTextField(value=digest,onValueChange={digest=it},label={Text("Expected SHA-256")},enabled=!busy)
                     Text("Use an independently trusted checksum. Large files may take time; file is never executed.",color=muted)
                 }
-                DialogKind.REMOVE_PHONE -> Text("Only this configuration is removed; no guest disk exists.")
+                DialogKind.REMOVE_PHONE -> Text("Removes this configuration and retains its profile files.")
                 DialogKind.REMOVE_IMAGE -> Text("Remove the reference, not the source document. Referenced images cannot be removed.")
                 DialogKind.RENAME -> Unit
             }
@@ -203,7 +205,7 @@ private fun OpenScreen(activity: ComponentActivity) {
         dismissButton={TextButton(enabled=!busy,onClick={dialog=null}){Text("Cancel")}},
         confirmButton={Button(enabled=!busy,onClick={
             when(d){
-                DialogKind.CREATE-> { val n=name;val i=imageId;val k=runtime;val m=memory;mutate{Rules.addPhone(it,n,i,k,m)} }
+                DialogKind.CREATE-> { val n=name;val i=imageId;val k=runtime;val m=memory;commit{volumes.create(n,i,k,m)} }
                 DialogKind.RENAME-> {val id=target;val n=name;mutate{Rules.rename(it,id,n)}}
                 DialogKind.REMOVE_PHONE->{val id=target;mutate{Rules.remove(it,id)}}
                 DialogKind.REMOVE_IMAGE->{
