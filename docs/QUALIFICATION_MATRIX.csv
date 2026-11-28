@@ -9,15 +9,15 @@ AP02,APK,M00/M01,Install coexistence,Exact APK launches without overwriting Cycl
 AP03,APK,M00/M01,Tile API 33,Correctly returns to launcher,NOT_RUN,No authorized physical device connected. See STATE.md.
 AP04,APK,M00/M01,Tile API 34+,PendingIntent opens correct app,NOT_RUN,No authorized physical device connected. See STATE.md.
 AP05,APK,M00/M01,Rotation,No lost committed selection,NOT_RUN,
-AP06,APK,M00/M01,Registry restart,Names IDs selections persist,NOT_RUN,
-AP07,APK,M00/M01,Corrupt registry,Error; no silent reset,NOT_RUN,
-AP08,APK,M00/M01,Interrupted write,Old or new complete record; no partial state,NOT_RUN,
-AP09,APK,M00/M01,Concurrent updates,No lost committed record,NOT_RUN,
+AP06,APK,M00/M01,Registry restart,Names IDs selections persist,NOT_RUN,Android 15 CI verified reopening the store. Full app process restart needs a separate test.
+AP07,APK,M00/M01,Corrupt registry,Error; no silent reset,CI_VERIFIED,Android 15 emulator build #5 rejected corrupt and unsupported schemas. The original bytes remained intact.
+AP08,APK,M00/M01,Interrupted write,Old or new complete record; no partial state,CI_VERIFIED,Android 15 emulator build #5 exercised interrupted AtomicFile staging and recovery including the first write and a legacy backup.
+AP09,APK,M00/M01,Concurrent updates,No lost committed record,CI_VERIFIED,Android 15 emulator build #5 verified 20 concurrent mutations through one app store and reopened all records.
 AP10,APK,M00/M01,Image grant release,Unused permission released after safe removal,NOT_RUN,
 AP11,APK,M00/M01,Provider changed,Changed bytes not bootable,NOT_RUN,
 AP12,APK,M00/M01,Accessibility,Large font and screen reader controls usable,NOT_RUN,
 AP13,APK,M00/M01,Picker pagination,All authorized image choices reachable,NOT_RUN,
-AP14,APK,M00/M01,Signing continuity,Owner-approved update key and migration evidence,BLOCKED,Verified build #3 and #4 APKs use different debug signing certificates. No owner-approved update key or migration evidence. See EVIDENCE.md.
+AP14,APK,M00/M01,Signing continuity,Owner-approved update key and migration evidence,BLOCKED,Verified build #3 through #5 APKs use different debug signing certificates. No owner-approved update key or migration evidence. See EVIDENCE.md.
 LC01,lifecycle,M03/M04,Duplicate request,One resource per idempotency key,NOT_RUN,
 LC02,lifecycle,M03/M04,Stale generation,Rejected,NOT_RUN,
 LC03,lifecycle,M03/M04,Wrong device,No input or data routed,NOT_RUN,
