@@ -9,6 +9,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -91,6 +92,29 @@ class ImageReferencesTest {
         assertTrue(runCatching { references.recheck(saved.id) }.exceptionOrNull() is ImageReferenceException)
         assertEquals(saved, store.read().images.single())
         assertFalse(permissions.held().isEmpty())
+    }
+
+    @Test
+    fun draftDoctorReadsOnlyTheSelectedPrivateDirectoryAndGrant() {
+        val saved = record("Original")
+        val first = Rules.addPhone(Registry(images = listOf(saved)), "First", saved.id, RuntimeKind.LOCAL_VM, 3072)
+        val second = Rules.addPhone(first, "Second", saved.id, RuntimeKind.REMOTE_VM, 3072)
+        val dataRoot = File(directory, "profiles")
+        val storage = ProfileStorage(dataRoot, File(directory, "cache"))
+        val permissions = FakePermissions(originalUri)
+        val images = ImageReferences(store, permissions) { _, _ -> error("Draft checks must not read image bytes.") }
+
+        assertNull(RuntimeDoctor.inspectDraft(Rules.select(second, HOST_ID), storage, images))
+        assertEquals(DraftHealth(second.selected, DraftVolumeStatus.MISSING, DraftGrantStatus.HELD),
+            RuntimeDoctor.inspectDraft(second, storage, images))
+        assertFalse(dataRoot.exists())
+
+        storage.prepare(UUID.fromString(first.selected))
+        permissions.release(originalUri)
+        assertEquals(DraftHealth(first.selected, DraftVolumeStatus.PRESENT, DraftGrantStatus.MISSING),
+            RuntimeDoctor.inspectDraft(Rules.select(second, first.selected), storage, images))
+        assertEquals(DraftHealth(second.selected, DraftVolumeStatus.MISSING, DraftGrantStatus.MISSING),
+            RuntimeDoctor.inspectDraft(second, storage, images))
     }
 
     private fun record(label: String) = ImageRecord(UUID.randomUUID().toString(), label, 15, originalUri.toString(), original.hash, original.bytes)

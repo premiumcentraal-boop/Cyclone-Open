@@ -67,10 +67,12 @@ internal class ImageReferences(
         (permissions.held() - needed).forEach(::release)
     }
 
+    fun hasPersistedReadGrant(record: ImageRecord): Boolean = Uri.parse(record.uri) in permissions.held()
+
     suspend fun recheck(id: String) {
         val record = requireNotNull(store.read().images.firstOrNull { it.id == id })
         val uri = Uri.parse(record.uri)
-        if (uri !in permissions.held()) throw accessError()
+        if (!hasPersistedReadGrant(record)) throw accessError()
         val current = inspect(uri, record.sha256)
         checkOriginal(record, current)
     }

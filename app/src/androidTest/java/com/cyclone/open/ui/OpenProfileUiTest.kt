@@ -22,8 +22,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.cyclone.open.core.DraftGrantStatus
+import com.cyclone.open.core.DraftHealth
 import com.cyclone.open.core.DraftRequest
 import com.cyclone.open.core.DraftReviews
+import com.cyclone.open.core.DraftVolumeStatus
 import com.cyclone.open.core.ReferenceCatalogReader
 import com.cyclone.open.core.Registry
 import com.cyclone.open.MainActivity
@@ -124,5 +127,19 @@ class OpenProfileUiTest {
         compose.onNodeWithText("Guest boot · Not run").assertExists()
         compose.onNodeWithText("Google Play licensing · Not run").assertExists()
         compose.onNodeWithText("Certification · Not run").assertExists()
+    }
+
+    @Test
+    fun draftDoctorHidesFactsFromThePriorSelection() {
+        val phone = PhoneRecord(UUID.randomUUID().toString(), "Harbor", RuntimeKind.LOCAL_VM, "image", 3072)
+        val observation = mutableStateOf(DraftHealth(UUID.randomUUID().toString(), DraftVolumeStatus.PRESENT, DraftGrantStatus.HELD))
+        compose.runOnUiThread {
+            compose.activity.setContent { OpenGlass.Theme { DraftHealthPanel(phone, observation.value) } }
+        }
+        compose.onNodeWithText("Refresh checks for this draft.").assertIsDisplayed()
+        compose.onNodeWithText("Image read grant · Held").assertDoesNotExist()
+        compose.runOnUiThread { observation.value = DraftHealth(phone.id, DraftVolumeStatus.MISSING, DraftGrantStatus.HELD) }
+        compose.onNodeWithText("Draft volume · Missing").assertIsDisplayed()
+        compose.onNodeWithText("Image read grant · Held").assertIsDisplayed()
     }
 }
