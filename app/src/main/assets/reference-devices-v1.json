@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "references": [
+    {
+      "id": "pixel-7-class",
+      "revision": 1,
+      "label": "Pixel 7-class",
+      "display": {
+        "widthPx": 1080,
+        "heightPx": 2400,
+        "maxRefreshHz": 90,
+        "dimensionsSource": "https://support.google.com/pixelphone/answer/7158570/pixel-phone-hardware-tech-specs?hl=en-GB",
+        "refreshSource": "https://support.google.com/pixelphone/answer/7158570/pixel-phone-hardware-tech-specs?hl=en-GB",
+        "reviewedOn": "2026-11-28"
+      },
+      "suggested": { "densityDpi": 420, "memoryMiB": 3072, "revision": 1 }
+    },
+    {
+      "id": "galaxy-s22-class",
+      "revision": 1,
+      "label": "Galaxy S22-class",
+      "display": {
+        "widthPx": 1080,
+        "heightPx": 2340,
+        "maxRefreshHz": 120,
+        "dimensionsSource": "https://www.samsung.com/sg/support/mobile-devices/enjoy-the-epic-standard-of-smartphone-experiences-with-the-galaxy-s22-series/",
+        "refreshSource": "https://news.samsung.com/global/new-samsung-galaxy-s22-and-s22-plus-deliver-revolutionary-camera-experiences-day-and-night",
+        "reviewedOn": "2026-11-28"
+      },
+      "suggested": { "densityDpi": 420, "memoryMiB": 3072, "revision": 1 }
+    }
+  ]
+}

@@ -34,11 +34,32 @@ internal class PhoneVolumeRepository(
         registry
     }
 
-    fun create(name: String, imageId: String, runtime: RuntimeKind, memory: Int): Registry = synchronized(store) {
+    fun reviewDraft(catalog: ReferenceCatalog, request: DraftRequest): DraftReview =
+        DraftReviews.prepare(store.read(), catalog, request)
+
+    fun publishDraft(catalog: ReferenceCatalog, approved: DraftReview): Registry = synchronized(store) {
         val current = store.read()
+        val id = UUID.fromString(approved.instanceId)
+        val existing = current.phones.firstOrNull { it.id == approved.instanceId }
+        if (existing != null) {
+            val request = approved.request
+            if (existing.reference != request.reference || existing.imageId != request.imageId ||
+                existing.runtime != request.backend || existing.memoryMiB != request.memoryMiB) {
+                throw DraftReviewException("This approval does not match the saved draft. Review again.")
+            }
+            if (!existing.volumePrepared || !storage.isPrepared(id)) {
+                throw DraftReviewException("The saved draft has unavailable profile storage. Reload the registry.")
+            }
+            recoverPending(current)
+            return@synchronized current
+        }
+        val request = DraftReviews.confirm(current, catalog, approved)
         recoverPending(current)
-        val proposed = Rules.addPhone(current, name, imageId, runtime, memory)
-        provision(UUID.fromString(proposed.selected), proposed)
+        if (storage.isPrepared(id)) throw DraftReviewException("This approval's profile storage has been retained. Start a new draft.")
+        val proposed = Rules.addPhone(
+            current, request.name, request.imageId, request.backend, request.memoryMiB, request.reference, approved.instanceId
+        )
+        provision(id, proposed)
     }
 
     private fun provision(id: UUID, proposed: Registry): Registry {

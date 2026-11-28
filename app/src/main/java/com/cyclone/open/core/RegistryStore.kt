@@ -60,7 +60,10 @@ class RegistryStore internal constructor(
                 PhoneRecord(
                     it.getString("id"), it.getString("name"), RuntimeKind.valueOf(it.getString("runtime")),
                     it.getString("image"), it.getInt("memory"),
-                    if (it.has("volumePrepared")) it.get("volumePrepared") as Boolean else false
+                    if (it.has("volumePrepared")) it.get("volumePrepared") as Boolean else false,
+                    if (it.has("reference")) it.getJSONObject("reference").let { reference ->
+                        ReferenceKey(reference.get("id") as String, reference.get("revision") as Int)
+                    } else null
                 )
             } },
             selected = o.getString("selected")
@@ -79,6 +82,9 @@ class RegistryStore internal constructor(
             .put("phones", JSONArray(next.phones.map {
                 JSONObject().put("id", it.id).put("name", it.name).put("runtime", it.runtime.name)
                     .put("image", it.imageId).put("memory", it.memoryMiB).put("volumePrepared", it.volumePrepared)
+                    .apply { it.reference?.let { reference ->
+                        put("reference", JSONObject().put("id", reference.id).put("revision", reference.revision))
+                    } }
             })).toString().toByteArray(Charsets.UTF_8)
         try {
             val out = file.startWrite()

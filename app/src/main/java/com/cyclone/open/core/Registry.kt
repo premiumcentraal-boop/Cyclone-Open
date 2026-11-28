@@ -16,7 +16,8 @@ data class PhoneRecord(
     val runtime: RuntimeKind,
     val imageId: String,
     val memoryMiB: Int,
-    val volumePrepared: Boolean = false
+    val volumePrepared: Boolean = false,
+    val reference: ReferenceKey? = null
 )
 data class Registry(val images: List<ImageRecord> = emptyList(), val phones: List<PhoneRecord> = emptyList(), val selected: String = HOST_ID)
 
@@ -34,7 +35,7 @@ object Rules {
         }
         r.phones.forEach {
             require(validId(it.id) && label(it.name) == it.name && it.runtime != RuntimeKind.HOST)
-            require(it.memoryMiB in listOf(2048, 3072, 4096) && r.images.any { image -> image.id == it.imageId })
+            require(it.memoryMiB in draftMemoryOptions && r.images.any { image -> image.id == it.imageId })
         }
         require(r.selected == HOST_ID || r.phones.any { it.id == r.selected })
         return r
@@ -43,8 +44,11 @@ object Rules {
         require(r.images.none { it.uri == image.uri }) { "This document is already in the library." }
         return validate(r.copy(images = r.images + image))
     }
-    fun addPhone(r: Registry, name: String, imageId: String, runtime: RuntimeKind, memory: Int): Registry {
-        val phone = PhoneRecord(UUID.randomUUID().toString(), label(name), runtime, imageId, memory)
+    fun addPhone(
+        r: Registry, name: String, imageId: String, runtime: RuntimeKind, memory: Int,
+        reference: ReferenceKey? = null, id: String = UUID.randomUUID().toString()
+    ): Registry {
+        val phone = PhoneRecord(id, label(name), runtime, imageId, memory, reference = reference)
         return validate(r.copy(phones = r.phones + phone, selected = phone.id))
     }
     fun select(r: Registry, id: String): Registry = validate(r.copy(selected = id))
