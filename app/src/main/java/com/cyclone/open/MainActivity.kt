@@ -61,6 +61,7 @@ private fun GlassCard(modifier: Modifier = Modifier, selected: Boolean = false, 
 private fun OpenScreen(activity: ComponentActivity) {
     val store=remember { RegistryStore.get(activity) }
     val volumes = remember(store) { PhoneVolumeRepository(activity, store) }
+    val switcher = remember { AtomicSwitchJournal.coordinator(activity) }
     var registry by remember { mutableStateOf<Registry?>(null) }
     var page by remember { mutableStateOf(Page.PHONES) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -86,6 +87,15 @@ private fun OpenScreen(activity: ComponentActivity) {
     }
     fun refresh() { scope.launch { try { registry=withContext(Dispatchers.IO){volumes.open()}; error=null } catch(e: CancellationException){throw e} catch(e:Exception){showError(e)} } }
     LaunchedEffect(Unit) { refresh() }
+    LaunchedEffect(switcher) {
+        try {
+            withContext(Dispatchers.IO) { switcher.recover() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: java.io.IOException) {
+            error = "Saved switch state could not be recovered. Android Home is available."
+        }
+    }
     fun commit(operation: () -> Registry) {
         if(busy) return
         busy=true;error=null
@@ -103,6 +113,16 @@ private fun OpenScreen(activity: ComponentActivity) {
     fun nativeSettings() {
         try { activity.startActivity(Intent("android.settings.USER_SETTINGS")) }
         catch(_:Exception) { activity.startActivity(Intent(Settings.ACTION_SETTINGS)) }
+    }
+    fun returnHome() = scope.launch {
+        try {
+            withContext(Dispatchers.IO) { switcher.switchTo(PhoneTarget.Host) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: java.io.IOException) {
+            // Android Home remains available even if the app's journal cannot be saved.
+        }
+        activity.startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
     Scaffold(
         containerColor=bg,
@@ -130,7 +150,7 @@ private fun OpenScreen(activity: ComponentActivity) {
                         Text("Android "+Build.VERSION.RELEASE+" · "+HostRuntime.status().detail,color=muted)
                         if(r.selected!=HOST_ID) OutlinedButton(enabled=!busy,onClick={mutate{Rules.select(it,HOST_ID)}}){Text("Select host")}
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                            Button(onClick={activity.startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}){Text("Return home")}
+                            Button(onClick={returnHome()}){Text("Return home")}
                             OutlinedButton(onClick={nativeSettings()}){Text("Users")}
                         }
                     } }

@@ -64,14 +64,23 @@ object Rules {
 }
 
 data class RuntimeStatus(val state: RuntimeState, val detail: String)
-interface PhoneRuntime { fun status(): RuntimeStatus }
-object HostRuntime : PhoneRuntime {
-    override fun status() = RuntimeStatus(RuntimeState.HOST_AVAILABLE, "Current Android user")
+internal interface PhoneRuntime {
+    fun status(): RuntimeStatus
+    suspend fun step(stage: SwitchStage, lease: GenerationLease): RuntimeStepResult
 }
-class UnavailableRuntime(private val kind: RuntimeKind) : PhoneRuntime {
+internal object HostRuntime : PhoneRuntime {
+    override fun status() = RuntimeStatus(RuntimeState.HOST_AVAILABLE, "Current Android user")
+    override suspend fun step(stage: SwitchStage, lease: GenerationLease) =
+        if (lease.target == PhoneTarget.Host) RuntimeStepResult.Verified(lease)
+        else RuntimeStepResult.Rejected(SwitchFailure.WRONG_TARGET)
+}
+internal class UnavailableRuntime(private val kind: RuntimeKind) : PhoneRuntime {
     override fun status() = RuntimeStatus(RuntimeState.NOT_IMPLEMENTED, when (kind) {
         RuntimeKind.LOCAL_VM -> "Local Android guest backend not implemented. Pixel AVF and graphics require verification."
         RuntimeKind.REMOTE_VM -> "Remote runtime not connected. No server configured."
         RuntimeKind.HOST -> error("Use HostRuntime")
     })
+
+    override suspend fun step(stage: SwitchStage, lease: GenerationLease) =
+        RuntimeStepResult.Rejected(SwitchFailure.NOT_IMPLEMENTED)
 }
