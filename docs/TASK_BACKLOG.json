@@ -1,0 +1,184 @@
+{
+  "schema": 1,
+  "authoritative_contract": "MASTER_BIBLE.md section 12",
+  "status_note": "Updated 2026-11-28. Milestones distinguish artifact verification, physical acceptance and source changes. See STATE.md and EVIDENCE.md.",
+  "milestones": [
+    {
+      "id": "M00",
+      "title": "Preserve green APK baseline",
+      "depends_on": [],
+      "status": "ARTIFACT_VERIFIED_HARDWARE_PENDING",
+      "evidence": "EVIDENCE.md"
+    },
+    {
+      "id": "M01",
+      "title": "Core hardening",
+      "depends_on": [
+        "M00"
+      ],
+      "status": "IN_PROGRESS",
+      "evidence": "EVIDENCE.md"
+    },
+    {
+      "id": "M02",
+      "title": "Premium interface",
+      "depends_on": [
+        "M01"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M03",
+      "title": "Typed lifecycle and runtime contract",
+      "depends_on": [
+        "M01"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M04",
+      "title": "Native workspace adapter",
+      "depends_on": [
+        "M03"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M05",
+      "title": "Pixel feasibility spike",
+      "depends_on": [
+        "M00"
+      ],
+      "status": "BLOCKED",
+      "evidence": "STATE.md"
+    },
+    {
+      "id": "M06",
+      "title": "Linux full Android reference",
+      "depends_on": [],
+      "status": "BLOCKED",
+      "evidence": "STATE.md"
+    },
+    {
+      "id": "M07",
+      "title": "Image repository",
+      "depends_on": [
+        "M01",
+        "M03"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M08",
+      "title": "Local graphical Android guest",
+      "depends_on": [
+        "M03",
+        "M05",
+        "M07"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M09",
+      "title": "Remote VM adapter",
+      "depends_on": [
+        "M03",
+        "M06",
+        "M07"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M10",
+      "title": "Viewer and Aurora",
+      "depends_on": [
+        "M03",
+        "M08 OR M09"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M11",
+      "title": "GPU and media qualification",
+      "depends_on": [
+        "M10"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M12",
+      "title": "Virtual hardware services",
+      "depends_on": [
+        "M10",
+        "M11"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M13",
+      "title": "Reliability and data protection",
+      "depends_on": [
+        "M07",
+        "M10",
+        "M12"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M14",
+      "title": "Ecosystem licensing and compatibility",
+      "depends_on": [],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M15",
+      "title": "Reference catalog",
+      "depends_on": [
+        "M07",
+        "M12",
+        "M14 applicable"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M16",
+      "title": "Genuine physical backend",
+      "depends_on": [
+        "M03",
+        "M10"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M17",
+      "title": "Release engineering",
+      "depends_on": [
+        "applicable mandatory gates"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    },
+    {
+      "id": "M18",
+      "title": "Optional scale/economy",
+      "depends_on": [
+        "M17"
+      ],
+      "status": "NOT_RUN",
+      "evidence": null
+    }
+  ]
+}

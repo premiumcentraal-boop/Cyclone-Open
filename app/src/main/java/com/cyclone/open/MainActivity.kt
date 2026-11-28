@@ -74,7 +74,14 @@ private fun OpenScreen(activity: ComponentActivity) {
     var imageId by remember { mutableStateOf("") }
     var uri by remember { mutableStateOf<Uri?>(null) }
     val scope=rememberCoroutineScope()
-    fun showError(e: Exception) { error=if(e is IllegalArgumentException) "Invalid configuration or checksum. Check the fields and try again." else "Operation failed. Existing records were not intentionally changed." }
+    fun showError(e: Exception) {
+        error = when (e) {
+            is RegistryReadException -> "Saved records could not be read. Reload the registry to retry."
+            is RegistryWriteException -> "The change could not be confirmed. Reload the registry before retrying."
+            is IllegalArgumentException -> "Invalid configuration or checksum. Check the fields and try again."
+            else -> "Operation failed. Existing records were not intentionally changed."
+        }
+    }
     fun refresh() { scope.launch { try { registry=withContext(Dispatchers.IO){store.read()}; error=null } catch(e: CancellationException){throw e} catch(e:Exception){showError(e)} } }
     LaunchedEffect(Unit) { refresh() }
     fun mutate(block: (Registry)->Registry) {
@@ -206,11 +213,24 @@ private fun OpenScreen(activity: ComponentActivity) {
                             try{
                                 registry=withContext(Dispatchers.IO){
                                     val label=Rules.label(n)
-                                    require(store.read().images.none{it.uri==u.toString()})
+                                    val uriText = u.toString()
+                                    require(store.read().images.none { it.uri == uriText })
                                     val check=ImageInspector.inspect(activity.contentResolver,u,hash)
-                                    activity.contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    try{store.change{Rules.addImage(it,ImageRecord(UUID.randomUUID().toString(),label,v,u.toString(),check.hash,check.bytes))}}
-                                    catch(e:Exception){runCatching{activity.contentResolver.releasePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)};throw e}
+                                    val image = ImageRecord(UUID.randomUUID().toString(), label, v, uriText, check.hash, check.bytes)
+                                    val resolver = activity.contentResolver
+                                    val grant = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                    synchronized(store) {
+                                        require(store.read().images.none { it.uri == uriText })
+                                        resolver.takePersistableUriPermission(u, grant)
+                                        try {
+                                            store.change { Rules.addImage(it, image) }
+                                        } catch (e: Exception) {
+                                            // A write can be unconfirmed. Keep access if any saved reference may still need it.
+                                            val unused = runCatching { store.read().images.none { it.uri == uriText } }.getOrDefault(false)
+                                            if (unused) runCatching { resolver.releasePersistableUriPermission(u, grant) }
+                                            throw e
+                                        }
+                                    }
                                 }
                                 dialog=null
                             }catch(e:CancellationException){throw e}catch(e:Exception){showError(e);dialog=null}finally{busy=false}

@@ -46,3 +46,43 @@ jobs:
           path: |
             app/build/reports/tests/
             app/build/reports/lint-results-debug.*
+  registry-instrumentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Prepare Android 15 emulator
+        run: |
+          sudo setfacl -m "u:$(id -un):rw" /dev/kvm
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          avdmanager="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
+          image='system-images;android-35;default;x86_64'
+          "$sdkmanager" 'platforms;android-35' 'build-tools;34.0.0' 'platform-tools' 'emulator' "$image"
+          printf 'no\n' | "$avdmanager" create avd --name cyclone-registry --package "$image"
+      - name: Run registry instrumentation
+        run: |
+          adb="$ANDROID_HOME/platform-tools/adb"
+          "$ANDROID_HOME/emulator/emulator" -avd cyclone-registry -port 5554 -no-window -no-audio -no-snapshot -gpu swiftshader_indirect > emulator.log 2>&1 &
+          emulator_pid=$!
+          trap 'kill "$emulator_pid" 2>/dev/null || true' EXIT
+          export ANDROID_SERIAL=emulator-5554
+          timeout 300 "$adb" wait-for-device
+          timeout 300 bash -c 'until [ "$("$1" shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 2; done' _ "$adb"
+          gradle --no-daemon :app:connectedDebugAndroidTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: registry-instrumentation-reports
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+            emulator.log
