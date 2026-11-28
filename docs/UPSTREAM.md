@@ -50,3 +50,13 @@ These ports come from Cyclone-Cloak `62a05e4a966119908125016211096983cb258529`. 
 | `core/StrictJson.kt` | `android/app/src/main/java/dev/cyclone/cloak/forge/StrictJson.kt` · `7d783b2f319a51d1e88283158d44d73e332031bc` | MIT | Rejects duplicate names, lenient grammar and trailing input. Adds bounded UTF-8 reads for catalog and backups. `ProfileBackupTest` and `ReferenceCatalogReaderTest`. |
 | `core/JsonDirectory.kt` | `android/app/src/main/java/dev/cyclone/cloak/data/JsonDirectory.kt` · `9155dd6f3943779787db31afa0165fab5895c458` | MIT | Canonical UUID filenames, synced staged writes, atomic directory swap, restart recovery. `ProfileBackupTest`. |
 | `core/ProfileBackup.kt` | `android/app/src/main/java/dev/cyclone/cloak/forge/ProfileBackup.kt` · `8a655c6c351c8d3e5db5fd436b63c5c2ec3b626b` | MIT | Rewrites the backup schema around draft settings and an image digest. Restore creates a new reviewed draft. `ProfileBackupTest`. |
+
+### Operation diagnostics and additional references
+
+| Cyclone Open file | Pinned Cloak diagnostic source and Git blob | License | Adaptation and tests |
+| --- | --- | --- | --- |
+| `core/DiagnosticsRegistry.kt` | `android/app/src/main/java/dev/cyclone/cloak/diagnostics/DiagnosticsRegistry.kt` · `50208aaeb67f7f57f768f1e92774fe21cec30427` and `BindingRunJournal.kt` in that directory · `0ee4e5805dc211bacec89250acabc6f3e840a73f` | MIT | Uses a bounded AtomicFile of controller operations with fixed reason codes. It retains no target ID, name, URI or exception data. `DiagnosticsRegistryTest`. |
+| `core/LogBus.kt` | `android/app/src/main/java/dev/cyclone/cloak/diagnostics/LogBus.kt` · `9809e35f7646a142dc5cccae5eb47072dc425b8b` | MIT | Wraps typed controller operations and marks prior unfinished records interrupted. Registry and volume recovery remain authoritative. `DiagnosticsRegistryTest`. |
+| `assets/reference-devices-v1.json` | Cloak `catalog/device-factory-v1.json` · `310104bf3781d273b74760dcf8483c7755f69831` | MIT for the donor inventory | Includes Pixel 7a-class and Pixel 8-class display references independently checked with Google. Suggested sizing is an Open draft choice. `ReferenceCatalogReaderTest`. |
+
+Google specifies 1080 × 2400 for the Pixel 7a and Pixel 8. The maximum refresh values for these references are 90 Hz and 120 Hz respectively. These are virtual display targets. [Google hardware specifications](https://support.google.com/pixelphone/answer/7158570/pixel-phone-hardware-tech-specs?hl=en-GB) · [Google refresh specifications](https://support.google.com/pixelphone/answer/6111557/manage-screen-and-display-settings-on-a-pixel-phone)

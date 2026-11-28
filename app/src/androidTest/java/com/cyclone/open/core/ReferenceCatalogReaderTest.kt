@@ -14,10 +14,10 @@ class ReferenceCatalogReaderTest {
     @Test
     fun packagedReferencesHaveSeparatePublicDisplayAndSuggestedSettings() {
         val catalog = ReferenceCatalogReader.load(context)
-        assertEquals(listOf("pixel-7-class", "galaxy-s22-class"), catalog.references.map { it.key.id })
-        assertEquals(listOf(2400, 2340), catalog.references.map { it.display.heightPx })
-        assertEquals(listOf(90, 120), catalog.references.map { it.display.maxRefreshHz })
-        assertEquals(listOf(3072, 3072), catalog.references.map { it.suggested.memoryMiB })
+        assertEquals(listOf("pixel-7-class", "pixel-7a-class", "pixel-8-class", "galaxy-s22-class"), catalog.references.map { it.key.id })
+        assertEquals(listOf(2400, 2400, 2400, 2340), catalog.references.map { it.display.heightPx })
+        assertEquals(listOf(90, 90, 120, 120), catalog.references.map { it.display.maxRefreshHz })
+        assertEquals(listOf(3072, 3072, 3072, 3072), catalog.references.map { it.suggested.memoryMiB })
         assertEquals(64, catalog.digest.length)
     }
 

@@ -34,7 +34,8 @@ internal fun AuroraSheet(
     busy: Boolean,
     dismiss: () -> Unit,
     openAndroidHome: () -> Unit,
-    selectDraft: (String) -> Unit
+    selectDraft: (String) -> Unit,
+    interrupted: Boolean = false
 ) {
     ModalBottomSheet(onDismissRequest = dismiss) {
         LazyColumn(
@@ -47,6 +48,7 @@ internal fun AuroraSheet(
                     TextButton(onClick = dismiss) { Text("Close") }
                 }
                 Button(onClick = openAndroidHome) { Text("Return to Android Home") }
+                if (interrupted) Text("The previous operation was interrupted. Review the saved drafts before retrying.", color = OpenGlass.Muted)
             }
             if (registry != null) {
                 items(registry.phones, key = { it.id }) { phone ->

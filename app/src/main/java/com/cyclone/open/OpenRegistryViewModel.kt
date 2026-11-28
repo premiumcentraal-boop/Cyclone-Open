@@ -6,12 +6,14 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.cyclone.open.core.CatalogUnavailableException
 import com.cyclone.open.core.ControllerObservation
+import com.cyclone.open.core.ControllerAction
 import com.cyclone.open.core.DraftRequest
 import com.cyclone.open.core.DraftReview
 import com.cyclone.open.core.DraftReviewException
 import com.cyclone.open.core.ImageReferenceException
 import com.cyclone.open.core.ImageReferences
 import com.cyclone.open.core.JsonDirectory
+import com.cyclone.open.core.LogBus
 import com.cyclone.open.core.InsufficientProfileStorageException
 import com.cyclone.open.core.PhoneVolumeRepository
 import com.cyclone.open.core.ProfileBackup
@@ -50,6 +52,7 @@ internal class OpenRegistryViewModel(application: Application) : AndroidViewMode
     private val volumes = PhoneVolumeRepository(application, store)
     private val images = ImageReferences(store, application.contentResolver)
     private val savedBackups = ProfileBackups(JsonDirectory(File(application.noBackupFilesDir, "draft-backups-v1")))
+    private val logBus = LogBus.get(application)
     private val backupState = MutableStateFlow<List<Pair<String, ProfileBackup>>>(emptyList())
     private val operationState = MutableStateFlow(RegistryOperationState())
     private val catalogState = MutableStateFlow<CatalogState>(CatalogState.Loading)
@@ -61,10 +64,12 @@ internal class OpenRegistryViewModel(application: Application) : AndroidViewMode
     val review = draftReview.asStateFlow()
     val hostObservation = controllerObservation.asStateFlow()
     val backups = backupState.asStateFlow()
+    val history = logBus.history
 
     init { refresh() }
 
     fun refresh() = submit(closeDialog = false) {
+        logBus.startProcess()
         controllerObservation.value = RuntimeDoctor.observe(getApplication())
         catalogState.value = try {
             CatalogState.Loaded(ReferenceCatalogReader.load(getApplication()))
@@ -87,12 +92,14 @@ internal class OpenRegistryViewModel(application: Application) : AndroidViewMode
     }
 
     fun saveBackup(phoneId: String) = submit(closeDialog = false, notice = "Draft settings backed up on this device.") {
-        savedBackups.save(ProfileBackup.capture(store.read(), phoneId))
+        logBus.track(ControllerAction.SAVE_BACKUP) {
+            savedBackups.save(ProfileBackup.capture(store.read(), phoneId))
+        }
         backupState.value = savedBackups.list()
     }
 
     fun deleteBackup(id: String) = submit {
-        savedBackups.delete(id)
+        logBus.track(ControllerAction.REMOVE_BACKUP) { savedBackups.delete(id) }
         backupState.value = savedBackups.list()
     }
 
@@ -108,10 +115,11 @@ internal class OpenRegistryViewModel(application: Application) : AndroidViewMode
         draftReview.value = null
     }
 
-    fun publishDraft() = submit {
+    fun publishDraft(restore: Boolean = false) = submit {
         val approved = draftReview.value ?: throw DraftReviewException("Review the draft before saving.")
         try {
-            volumes.publishDraft(ReferenceCatalogReader.load(getApplication()), approved)
+            val action = if (restore) ControllerAction.RESTORE_DRAFT else ControllerAction.CREATE_DRAFT
+            logBus.track(action) { volumes.publishDraft(ReferenceCatalogReader.load(getApplication()), approved) }
             clearDraftReview()
         } catch (error: DraftReviewException) {
             clearDraftReview()

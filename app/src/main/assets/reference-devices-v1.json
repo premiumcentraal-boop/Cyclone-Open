@@ -16,6 +16,34 @@
       "suggested": { "densityDpi": 420, "memoryMiB": 3072, "revision": 1 }
     },
     {
+      "id": "pixel-7a-class",
+      "revision": 1,
+      "label": "Pixel 7a-class",
+      "display": {
+        "widthPx": 1080,
+        "heightPx": 2400,
+        "maxRefreshHz": 90,
+        "dimensionsSource": "https://support.google.com/pixelphone/answer/7158570?hl=en-gb",
+        "refreshSource": "https://support.google.com/pixelphone/answer/6111557/manage-screen-and-display-settings-on-a-pixel-phone",
+        "reviewedOn": "2026-11-28"
+      },
+      "suggested": { "densityDpi": 420, "memoryMiB": 3072, "revision": 1 }
+    },
+    {
+      "id": "pixel-8-class",
+      "revision": 1,
+      "label": "Pixel 8-class",
+      "display": {
+        "widthPx": 1080,
+        "heightPx": 2400,
+        "maxRefreshHz": 120,
+        "dimensionsSource": "https://support.google.com/pixelphone/answer/7158570/pixel-phone-hardware-tech-specs?hl=en-GB",
+        "refreshSource": "https://support.google.com/pixelphone/answer/6111557/manage-screen-and-display-settings-on-a-pixel-phone",
+        "reviewedOn": "2026-11-28"
+      },
+      "suggested": { "densityDpi": 420, "memoryMiB": 3072, "revision": 1 }
+    },
+    {
       "id": "galaxy-s22-class",
       "revision": 1,
       "label": "Galaxy S22-class",
