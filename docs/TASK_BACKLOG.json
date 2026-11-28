@@ -16,7 +16,7 @@
       "depends_on": [
         "M00"
       ],
-      "status": "IN_PROGRESS",
+      "status": "CI_VERIFIED",
       "evidence": "EVIDENCE.md"
     },
     {

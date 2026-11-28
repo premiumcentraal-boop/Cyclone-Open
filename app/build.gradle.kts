@@ -15,6 +15,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }
+    sourceSets.getByName("main").assets.srcDir(rootProject.file("docs/licenses"))
     providers.environmentVariable("CYCLONE_OPEN_CI_KEYSTORE").orNull?.let { keystorePath ->
         signingConfigs.getByName("debug") {
             storeFile = file(keystorePath)

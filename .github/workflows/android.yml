@@ -36,6 +36,11 @@ jobs:
             echo '::warning::CYCLONE_OPEN_DEBUG_KEYSTORE_B64 is missing. Checks will run, and no APK will be published.'
           fi
       - run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+      - name: Verify bundled upstream notice
+        shell: bash
+        run: |
+          unzip -p app/build/outputs/apk/debug/app-debug.apk assets/Cyclone-Cloak-MIT.txt \
+            | cmp - docs/licenses/Cyclone-Cloak-MIT.txt
       - name: Verify APK and record provenance
         if: env.CYCLONE_OPEN_CI_KEYSTORE != ''
         shell: bash

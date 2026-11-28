@@ -8,18 +8,19 @@ AP01,APK,M00/M01,Archive local verification,SOURCE_SHA and APK hash match verifi
 AP02,APK,M00/M01,Install coexistence,Exact APK launches without overwriting Cyclone,NOT_RUN,No authorized physical device connected. See STATE.md.
 AP03,APK,M00/M01,Tile API 33,Correctly returns to launcher,NOT_RUN,No authorized physical device connected. See STATE.md.
 AP04,APK,M00/M01,Tile API 34+,PendingIntent opens correct app,NOT_RUN,No authorized physical device connected. See STATE.md.
-AP05,APK,M00/M01,Rotation,No lost committed selection,NOT_RUN,
+AP05,APK,M00/M01,Rotation,No lost committed selection,NOT_RUN,Build #12 verified navigation across activity recreation. Physical rotation with a committed draft remains untested.
 AP06,APK,M00/M01,Registry restart,Names IDs selections persist,CI_VERIFIED,Build #8 on Android 15 verified a different process ID after force-stop and preserved the selected ID and renamed record.
 AP07,APK,M00/M01,Corrupt registry,Error; no silent reset,CI_VERIFIED,Android 15 emulator build #5 rejected corrupt and unsupported schemas. The original bytes remained intact.
 AP08,APK,M00/M01,Interrupted write,Old or new complete record; no partial state,CI_VERIFIED,Android 15 emulator build #5 exercised interrupted AtomicFile staging and recovery including the first write and a legacy backup.
 AP09,APK,M00/M01,Concurrent updates,No lost committed record,CI_VERIFIED,Android 15 emulator build #5 verified 20 concurrent mutations through one app store and reopened all records.
-AP10,APK,M00/M01,Image grant release,Unused permission released after safe removal,NOT_RUN,
-AP11,APK,M00/M01,Provider changed,Changed bytes not bootable,NOT_RUN,
+AP10,APK,M00/M01,Image grant release,Unused permission released after safe removal,CI_VERIFIED,Build #12 used a grant fixture and the Android AtomicFile registry to verify last-reference removal and orphan reconciliation.
+AP11,APK,M00/M01,Provider changed,Changed bytes not bootable,NOT_RUN,Build #12 rejected changed content in the verification fixture. Live provider mutation and any guest image boot path remain untested.
 AP12,APK,M00/M01,Accessibility,Large font and screen reader controls usable,NOT_RUN,Build #11 verified selection and action semantics with reduced motion. Manual TalkBack and large font tests remain open.
 AP13,APK,M00/M01,Picker pagination,All authorized image choices reachable,CI_VERIFIED,Build #11 searched 16 image references and selected item 16 through the picker.
 AP14,APK,M00/M01,Signing continuity,Owner-approved update key and migration evidence,BLOCKED,Local disposable-key signing verified. Build #7 had no repository signing secret and published no APK. Installed update data persistence remains untested.
 AP15,APK,M01,Registry disk full,Failed write preserves data with actionable error,CI_VERIFIED,Build #8 injected ENOSPC and EDQUOT after a partial write and verified unchanged bytes and a successful retry.
 AP16,APK,M01,Transactional profile volumes,Prepared volume precedes publication and startup recovers pending work,CI_VERIFIED,Build #9 verified legacy provisioning and kept committed data across a force-stop while removing an empty orphan.
+AP17,APK,M01,Image access recovery,Revoked access restored only for the original unchanged source,CI_VERIFIED,Build #12 verified the restoration rules using Android instrumentation and a permission and content fixture.
 LC01,lifecycle,M03/M04,Duplicate request,One resource per idempotency key,NOT_RUN,
 LC02,lifecycle,M03/M04,Stale generation,Rejected,CI_VERIFIED,Build #10 tested rejected stale fixture confirmations and lease invalidation after successful confirmation.
 LC03,lifecycle,M03/M04,Wrong device,No input or data routed,CI_VERIFIED,Build #10 rejected wrong-target fixture confirmations before lease publication. Guest input transport remains unverified.
