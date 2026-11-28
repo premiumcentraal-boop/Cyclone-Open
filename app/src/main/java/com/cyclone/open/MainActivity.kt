@@ -29,6 +29,7 @@ import com.cyclone.open.ui.DraftImagePicker
 import com.cyclone.open.ui.DraftReviewPanel
 import com.cyclone.open.ui.GlassPanel
 import com.cyclone.open.ui.OpenGlass
+import com.cyclone.open.ui.OperationHistoryPanel
 import com.cyclone.open.ui.PhoneProfileCard
 import com.cyclone.open.ui.ReferenceChoices
 import com.cyclone.open.ui.RuntimeDoctorPanel
@@ -63,6 +64,7 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
     val draftReview by controller.review.collectAsState()
     val hostObservation by controller.hostObservation.collectAsState()
     val backups by controller.backups.collectAsState()
+    val history by controller.history.collectAsState()
     val busy = operation.busy
     var page by rememberSaveable { mutableStateOf(Page.PHONES) }
     var switchError by remember { mutableStateOf<String?>(null) }
@@ -116,7 +118,13 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
     }
     fun returnHome() = scope.launch {
         try {
-            withContext(Dispatchers.IO) { switcher.switchTo(PhoneTarget.Host) }
+            withContext(Dispatchers.IO) {
+                LogBus.get(activity).track(ControllerAction.RETURN_HOME) {
+                    if (switcher.switchTo(PhoneTarget.Host) is RuntimeStepResult.Rejected) {
+                        throw java.io.IOException("The host lease could not be confirmed.")
+                    }
+                }
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (_: java.io.IOException) {
@@ -147,6 +155,7 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
             operation.notice?.let { notice -> item { Text(notice, color = mint) } }
             if (page == Page.HEALTH) {
                 item { RuntimeDoctorPanel(hostObservation, busy, controller::refreshHealth) }
+                item { OperationHistoryPanel(history) }
                 item { GlassPanel {
                     Text("Quick access", style = MaterialTheme.typography.titleLarge)
                     Text("Add Cyclone Open in Android Quick Settings for each Android user.", color = muted)
@@ -245,7 +254,8 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
             registry, busy,
             dismiss = { auroraOpen = false },
             openAndroidHome = { auroraOpen = false; returnHome() },
-            selectDraft = { id -> auroraOpen = false; controller.select(id) }
+            selectDraft = { id -> auroraOpen = false; controller.select(id) },
+            interrupted = history?.lastOrNull()?.status == RunStatus.INTERRUPTED
         )
     }
     val d=dialog
@@ -305,7 +315,7 @@ private fun OpenScreen(activity: ComponentActivity, controller: OpenRegistryView
                 DialogKind.CREATE -> if (draftReview != null) controller.publishDraft() else reference?.let {
                     controller.reviewDraft(DraftRequest(name, it.key, imageId, runtime, memory))
                 }
-                DialogKind.RESTORE -> if (draftReview != null) controller.publishDraft() else reference?.let {
+                DialogKind.RESTORE -> if (draftReview != null) controller.publishDraft(restore = true) else reference?.let {
                     controller.reviewRestore(target, it.key)
                 }
                 DialogKind.REMOVE_BACKUP -> controller.deleteBackup(target)
